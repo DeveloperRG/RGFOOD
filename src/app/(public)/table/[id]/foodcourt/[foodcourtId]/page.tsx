@@ -1,239 +1,177 @@
-// src/app/(public)/table/[tableId]/foodcourt/[foodcourtId]/page.tsx
-import Link from "next/link";
-import Image from "next/image";
+'use client';
 
-// Dummy data for menu categories
-const dummyCategories = [
-  {
-    id: "cat1",
-    name: "Appetizers",
-    displayOrder: 1,
-  },
-  {
-    id: "cat2",
-    name: "Main Courses",
-    displayOrder: 2,
-  },
-  {
-    id: "cat3",
-    name: "Desserts",
-    displayOrder: 3,
-  },
-  {
-    id: "cat4",
-    name: "Beverages",
-    displayOrder: 4,
-  },
-];
+import { useState } from 'react';
+import Image from 'next/image';
 
-// Dummy data for menu items
-const dummyMenuItems = [
-  {
-    id: "item1",
-    name: "Spring Rolls",
-    description: "Crispy spring rolls filled with vegetables",
-    price: 5.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat1",
-    isAvailable: true,
-  },
-  {
-    id: "item2",
-    name: "Fried Chicken Wings",
-    description: "Crispy fried chicken wings with special sauce",
-    price: 8.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat1",
-    isAvailable: true,
-  },
-  {
-    id: "item3",
-    name: "Beef Noodles",
-    description: "Savory beef noodles with rich broth",
-    price: 12.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat2",
-    isAvailable: true,
-  },
-  {
-    id: "item4",
-    name: "Vegetable Curry",
-    description: "Aromatic vegetable curry with rice",
-    price: 11.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat2",
-    isAvailable: true,
-  },
-  {
-    id: "item5",
-    name: "Mango Sticky Rice",
-    description: "Sweet sticky rice with fresh mango",
-    price: 6.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat3",
-    isAvailable: true,
-  },
-  {
-    id: "item6",
-    name: "Ice Cream",
-    description: "Vanilla ice cream with chocolate sauce",
-    price: 4.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat3",
-    isAvailable: true,
-  },
-  {
-    id: "item7",
-    name: "Thai Iced Tea",
-    description: "Sweet and creamy Thai iced tea",
-    price: 3.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat4",
-    isAvailable: true,
-  },
-  {
-    id: "item8",
-    name: "Fresh Fruit Smoothie",
-    description: "Refreshing smoothie made with seasonal fruits",
-    price: 4.99,
-    imageUrl: "/api/placeholder/300/200",
-    categoryId: "cat4",
-    isAvailable: true,
-  },
-];
+// Food item interface
+interface FoodItem {
+  id: number;
+  name: string;
+  price: number;
+  rating: number;
+  image: string;
+  category: string;
+}
 
-// Dummy foodcourt data
-const dummyFoodcourts = {
-  fc1: {
-    id: "fc1",
-    name: "Asian Delights",
-    description: "Authentic Asian cuisine from various regions",
-    image: "/api/placeholder/800/400",
-  },
-  fc2: {
-    id: "fc2",
-    name: "Burger Paradise",
-    description: "Juicy burgers and crispy fries",
-    image: "/api/placeholder/800/400",
-  },
-  fc3: {
-    id: "fc3",
-    name: "Pizza Haven",
-    description: "Traditional Italian pizzas baked in wood-fired ovens",
-    image: "/api/placeholder/800/400",
-  },
-  fc4: {
-    id: "fc4",
-    name: "Healthy Bites",
-    description: "Nutritious and delicious health-focused meals",
-    image: "/api/placeholder/800/400",
-  },
+// Component for rendering a single food item card
+const FoodCard = ({ item }: { item: FoodItem }) => {
+  return (
+    <div className="bg-yellow-100 rounded-xl p-4 relative flex flex-col items-center">
+      <div className="relative w-full h-36 mb-2 overflow-hidden rounded-lg">
+        <Image 
+          src={item.image} 
+          alt={item.name} 
+          fill 
+          className="object-cover rounded-lg"
+        />
+      </div>
+      <div className="w-full text-center">
+        <h3 className="text-sm font-medium">{item.name}</h3>
+        <p className="text-sm">Rp. {item.price.toLocaleString()}</p>
+        <div className="flex items-center justify-center mt-1">
+          <span className="text-yellow-500 mr-1">★</span>
+          <span className="text-xs">{item.rating.toFixed(1)}</span>
+        </div>
+      </div>
+      <button className="absolute bottom-4 right-4 bg-white p-1 rounded-md shadow-md">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+    </div>
+  );
 };
 
-export default function FoodcourtPage({
-  params,
-}: {
-  params: { tableId: string; foodcourtId: string };
-}) {
-  const { tableId, foodcourtId } = params;
+// Main page component
+export default function MenuPage() {
+  // Sample food data
+  const foodItems: FoodItem[] = [
+    {
+      id: 1,
+      name: "Nasi Goreng Special",
+      price: 25.000,
+      rating: 4.9,
+      image: "/nasi-goreng-1.jpg",
+      category: "Nasi Goreng"
+    },
+    {
+      id: 2,
+      name: "Mie Goreng Pedas",
+      price: 23.000,
+      rating: 4.9,
+      image: "/mie-goreng-1.jpg",
+      category: "Mie Goreng"
+    },
+    {
+      id: 3,
+      name: "Nasi Goreng Seafood",
+      price: 30.000,
+      rating: 4.9,
+      image: "/nasi-goreng-2.jpg",
+      category: "Nasi Goreng"
+    },
+    {
+      id: 4,
+      name: "Mie Goreng Ayam",
+      price: 22.000,
+      rating: 4.9,
+      image: "/mie-goreng-2.jpg",
+      category: "Mie Goreng"
+    },
+    {
+      id: 5,
+      name: "Nasi Goreng Kambing",
+      price: 35.000,
+      rating: 4.9,
+      image: "/nasi-goreng-3.jpg",
+      category: "Nasi Goreng"
+    },
+    {
+      id: 6,
+      name: "Cappuccino Special",
+      price: 18.000,
+      rating: 4.9,
+      image: "/cappuccino-1.jpg",
+      category: "Cappuccino"
+    },
+  ];
 
-  // In a real application, you would fetch the foodcourt data and its menu items
-  const foodcourt =
-    dummyFoodcourts[foodcourtId as keyof typeof dummyFoodcourts];
+  // Categories
+  const categories = ["Popular", "Nasi Goreng", "Mie Goreng", "Cappuccino"];
+  const [activeCategory, setActiveCategory] = useState("Popular");
 
-  // Group menu items by category
-  const categorizedItems = dummyCategories.map((category) => {
-    const items = dummyMenuItems.filter(
-      (item) => item.categoryId === category.id,
-    );
-    return {
-      ...category,
-      items,
-    };
-  });
+  // Filter foods by category
+  const filteredFoods = activeCategory === "Popular" 
+    ? foodItems.filter((item, index) => index < 6)
+    : foodItems.filter(item => item.category === activeCategory);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Link
-          href={`/table/${tableId}`}
-          className="mb-4 flex items-center text-blue-600 hover:text-blue-800"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="mr-2 h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Back to Foodcourts
-        </Link>
+    <div className="min-h-screen bg-white">
+      {/* Header with back button, search, and cart */}
+      <header className="fixed top-0 left-0 right-0 z-10 bg-white p-4 shadow-sm">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <button className="p-2 rounded-full bg-gray-100">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <div className="flex space-x-4">
+            <button className="p-2 rounded-full bg-gray-100">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+            <button className="p-2 rounded-full bg-gray-100 relative">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
 
-        <div className="relative mb-4 h-60 overflow-hidden rounded-lg">
-          <Image
-            src={foodcourt.image}
-            alt={foodcourt.name}
-            fill
-            className="object-cover"
-          />
+      <div className="pt-20 pb-6 px-4 md:px-8 max-w-6xl mx-auto">
+        {/* Restaurant profile */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-20 h-20 relative mb-3">
+            <Image 
+              src="/restaurant-logo.jpg"
+              alt="Restaurant Logo"
+              fill
+              className="rounded-full object-cover"
+            />
+          </div>
+          <h1 className="text-xl font-bold text-center">Coffe Memek</h1>
+          <p className="text-sm text-gray-500 text-center">Deskripsi tentang stand</p>
         </div>
 
-        <h1 className="mb-2 text-3xl font-bold text-gray-900">
-          {foodcourt.name}
-        </h1>
-        <p className="mb-4 text-lg text-gray-600">{foodcourt.description}</p>
-      </div>
-
-      {categorizedItems.map((category) => (
-        <div key={category.id} className="mb-12">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {category.name}
-            </h2>
-            <Link
-              href={`/table/${tableId}/foodcourt/${foodcourtId}/category/${category.id}`}
-              className="text-blue-600 hover:text-blue-800"
-            >
-              View All
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {category.items.map((item) => (
-              <div
-                key={item.id}
-                className="overflow-hidden rounded-lg bg-white shadow-md"
+        {/* Category tabs */}
+        <div className="mb-6  overflow-x-auto scrollbar-hide">
+          <div className="flex space-x-2 min-w-max">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm whitespace-nowrap ${
+                  activeCategory === category
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 text-gray-800"
+                }`}
               >
-                <div className="relative h-40">
-                  <Image
-                    src={item.imageUrl}
-                    alt={item.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-4">
-                  <div className="mb-2 flex items-start justify-between">
-                    <h3 className="text-lg font-bold">{item.name}</h3>
-                    <span className="text-lg font-semibold text-green-600">
-                      ${item.price.toFixed(2)}
-                    </span>
-                  </div>
-                  <p className="mb-4 text-gray-600">{item.description}</p>
-                  <button className="w-full rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700">
-                    Add to Cart
-                  </button>
-                </div>
-              </div>
+                {category}
+              </button>
             ))}
           </div>
         </div>
-      ))}
+
+        {/* Food grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 m-auto">
+          {filteredFoods.map((item) => (
+            <FoodCard key={item.id} item={item} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

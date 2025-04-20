@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 
+
 const dummyTables = [
   { id: "1", tableNumber: 1 },
   { id: "2", tableNumber: 2 },
