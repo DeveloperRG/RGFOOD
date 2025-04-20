@@ -91,52 +91,75 @@ export async function POST(request: Request) {
     });
 
     // Send verification email
-    // ~/app/api/auth/register/route.ts - Email sending section
-
-    // Inside your register route handler, update the email sending code:
-
     try {
       const verificationUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`;
 
-      // Log the attempt to send an email for debugging
       console.log("Attempting to send verification email to:", email);
+      console.log("Using verification URL:", verificationUrl);
+      console.log(
+        "Using Resend API key:",
+        process.env.RESEND_API_KEY ? "Key is set" : "Key is missing",
+      );
+      console.log("Verification token created:", verificationToken);
 
-      await resend.emails
-        .send({
-          from: "onboarding@resend.dev", // Use this for testing or your verified domain
-          to: email,
-          subject: "Verify your FoodCourt account",
-          html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="text-align: center; padding: 20px 0;">
-          <h1 style="color: #333;">Welcome to FoodCourt!</h1>
-        </div>
-        <div style="padding: 20px; background-color: #f9f9f9; border-radius: 5px;">
-          <p>Hello ${name},</p>
-          <p>Thank you for registering with FoodCourt. To complete your registration, please verify your email address by clicking the button below:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
+      const data = await resend.emails.send({
+        from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+        to: email,
+        subject: "Verify your FoodCourt account",
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="text-align: center; padding: 20px 0;">
+            <h1 style="color: #333;">Welcome to FoodCourt!</h1>
           </div>
-          <p>If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
-          <p style="word-break: break-all; font-size: 14px;">${verificationUrl}</p>
-          <p>This link will expire in 24 hours.</p>
-          <p>If you did not sign up for a FoodCourt account, please ignore this email.</p>
+          <div style="padding: 20px; background-color: #f9f9f9; border-radius: 5px;">
+            <p>Hello ${name},</p>
+            <p>Thank you for registering with FoodCourt. To complete your registration, please verify your email address by clicking the button below:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
+            </div>
+            <p>If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
+            <p style="word-break: break-all; font-size: 14px;">${verificationUrl}</p>
+            <p>This link will expire in 24 hours.</p>
+            <p>If you did not sign up for a FoodCourt account, please ignore this email.</p>
+          </div>
+          <div style="text-align: center; padding: 20px; font-size: 12px; color: #666;">
+            <p>&copy; ${new Date().getFullYear()} FoodCourt. All rights reserved.</p>
+          </div>
         </div>
-        <div style="text-align: center; padding: 20px; font-size: 12px; color: #666;">
-          <p>&copy; ${new Date().getFullYear()} FoodCourt. All rights reserved.</p>
-        </div>
-      </div>
-    `,
-        })
-        .then(() => {
-          console.log("Verification email sent successfully to:", email);
-        })
-        .catch((emailError) => {
-          console.error("Email sending error details:", emailError);
-        });
+        `,
+      });
+
+      console.log("Email sent successfully, response:", data);
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);
-      // We'll continue even if the email fails, but log the error
+      console.error("Error details:", JSON.stringify(emailError, null, 2));
+
+      // Check for specific error types
+      let errorMessage =
+        "User registered but verification email failed to send.";
+
+      if (emailError instanceof Error) {
+        if (emailError.message.includes("authentication")) {
+          errorMessage =
+            "Email authentication failed. Check your Resend API key.";
+        } else if (emailError.message.includes("rate limit")) {
+          errorMessage = "Email rate limit exceeded. Please try again later.";
+        } else if (emailError.message.includes("network")) {
+          errorMessage =
+            "Network error occurred when sending email. Check your internet connection.";
+        }
+      }
+
+      // Instead of silently continuing, return an error to the client
+      return NextResponse.json(
+        {
+          message: errorMessage,
+          error:
+            emailError instanceof Error ? emailError.message : "Unknown error",
+          user: user, // Return user info so they can try verifying again later
+        },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json(

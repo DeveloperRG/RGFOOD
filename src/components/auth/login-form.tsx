@@ -20,8 +20,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Loader2 } from "lucide-react";
-import { UserRole } from "~/types/shared-types";
-
+import { UserRole } from "~/lib/shared-types";
 
 const loginFormSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),

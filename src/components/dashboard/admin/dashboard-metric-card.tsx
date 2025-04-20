@@ -1,4 +1,4 @@
-// ~/components/dashboard/dashboard-metric-card.tsx
+// ~/components/dashboard/admin/dashboard-metric-card.tsx
 import React from "react";
 import { Card, CardContent } from "~/components/ui/card";
 import { TrendingDown, TrendingUp } from "lucide-react";

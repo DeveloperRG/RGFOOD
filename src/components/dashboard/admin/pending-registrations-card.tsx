@@ -1,4 +1,4 @@
-// ~/components/dashboard/pending-registrations-card.tsx
+// ~/components/dashboard/admin/pending-registrations-card.tsx
 "use client";
 
 import Link from "next/link";

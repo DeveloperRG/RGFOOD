@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserRole } from "~/types/shared-types"; // Assuming you've created this
+import { UserRole } from "~/lib/shared-types"; // Assuming you've created this
 import {
   User,
   LogOut,

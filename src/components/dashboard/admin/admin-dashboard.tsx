@@ -1,18 +1,11 @@
-// ~/app/(dashboard)/admin/client.tsx
+// ~/src/components/dashboard/admin/admin-dashboard.tsx
 "use client";
 
 import { DashboardLayout } from "~/components/layout/dashboard-layout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
 import { ShoppingCart, Store, Users, Book } from "lucide-react";
-import { DashboardMetricCard } from "~/components/dashboard/dashboard-metric-card";
-import { PendingRegistrationsCard } from "~/components/dashboard/pending-registrations-card";
-import { OrderStatus, UserRole } from "~/types/shared-types";
+import { DashboardMetricCard } from "~/components/dashboard/admin/dashboard-metric-card";
+import { PendingRegistrationsCard } from "~/components/dashboard/admin/pending-registrations-card";
+import { UserRole } from "~/lib/shared-types";
 
 // Types based on your schema
 interface User {
@@ -20,7 +13,6 @@ interface User {
   name?: string | null;
   email?: string | null;
   role: UserRole;
-  // Add other properties as needed
 }
 
 interface PendingRegistration {
@@ -30,7 +22,7 @@ interface PendingRegistration {
   createdAt: Date;
 }
 
-interface AdminDashboardClientProps {
+interface AdminDashboardProps {
   user: User;
   metrics: {
     foodCourtCount: number;
@@ -41,11 +33,11 @@ interface AdminDashboardClientProps {
   pendingRegistrations: PendingRegistration[];
 }
 
-export default function AdminDashboardClient({
+export function AdminDashboard({
   user,
   metrics,
   pendingRegistrations,
-}: AdminDashboardClientProps) {
+}: AdminDashboardProps) {
   return (
     <DashboardLayout user={user}>
       <div className="flex flex-col gap-6">

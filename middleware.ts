@@ -1,10 +1,30 @@
 // ~/middleware.ts
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "~/server/auth";
 import { UserRole } from "~/server/auth/config";
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { type Database } from "~/types/supabase";
 
-export default auth((req) => {
+/**
+ * Combined middleware for both NextAuth route protection and
+ * Supabase JWT authentication for Row Level Security
+ */
+export default auth(async (req) => {
   const { nextUrl, auth: session } = req;
+  const res = NextResponse.next();
+
+  // Create Supabase middleware client
+  const supabase = createMiddlewareClient<Database>({ req, res });
+
+  // If there's a session, set up Supabase auth with the user ID
+  if (session?.user) {
+    // Set custom claims for Supabase RLS
+    await supabase.auth.setSession({
+      access_token: session.user.id,
+      refresh_token: "",
+    });
+  }
+
   const isLoggedIn = !!session;
   const isAuthPage =
     nextUrl.pathname.startsWith("/login") ||
@@ -16,7 +36,7 @@ export default auth((req) => {
     nextUrl.pathname.startsWith("/menu") ||
     nextUrl.pathname.startsWith("/cart")
   ) {
-    return NextResponse.next();
+    return res;
   }
 
   // Redirect from auth pages if already logged in
@@ -60,7 +80,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/", nextUrl));
   }
 
-  return NextResponse.next();
+  return res;
 });
 
 // Matcher config - exclude public assets and API routes
