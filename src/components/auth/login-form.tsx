@@ -89,24 +89,16 @@ export function LoginForm() {
         return;
       }
 
-      // Get user role from session to determine redirect
       const response = await fetch("/api/auth/session");
       const session = await response.json();
 
       let redirectUrl = "/";
 
-      if (session?.user?.role) {
-        // Redirect based on role
-        switch (session.user.role) {
-          case UserRole.ADMIN:
-            redirectUrl = "/admin";
-            break;
-          case UserRole.FOODCOURT_OWNER:
-            redirectUrl = "/owner";
-            break;
-          default:
-            redirectUrl = "/";
-        }
+      if (session?.user?.role === UserRole.FOODCOURT_OWNER) {
+        const userId = session.user.id;
+        redirectUrl = `/owner/${userId}`;
+      } else if (session?.user?.role === UserRole.ADMIN) {
+        redirectUrl = "/admin";
       }
 
       router.push(redirectUrl);
@@ -115,6 +107,7 @@ export function LoginForm() {
       setError("An unexpected error occurred");
     }
   }
+
 
   const handleGoogleSignIn = async () => {
     try {

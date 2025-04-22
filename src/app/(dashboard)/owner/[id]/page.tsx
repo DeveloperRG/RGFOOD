@@ -1,15 +1,22 @@
 // ~/src/app/(dashboard)/owner/[id]/page.tsx
-import { notFound, redirect } from "next/navigation";
-import { db } from "~/server/db";
+
+import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
+import { db } from "~/server/db";
 import {
   UserRole,
   OrderStatus,
   type User,
   type Order,
+  type OrderStats,
+  type Foodcourt,
+  type Table,
+  type OrderItem,
+  type MenuItem,
 } from "~/lib/shared-types";
 import { OwnerDashboard } from "~/components/dashboard/owner/owner-dashboard";
 
+// This is a Server Component that fetches data
 export default async function OwnerDashboardPage({
   params,
 }: {
@@ -17,174 +24,201 @@ export default async function OwnerDashboardPage({
 }) {
   const session = await auth();
 
-  // Redirect if not logged in or not an owner
-  if (
-    !session?.user ||
-    (session.user.role !== UserRole.FOODCOURT_OWNER &&
-      session.user.role !== UserRole.ADMIN)
-  ) {
+  // Redirect if not logged in
+  if (!session?.user) {
     redirect("/login");
   }
 
-  const userId = session.user.id;
+  // Check if viewing own profile or admin viewing owner's profile
   const isAdmin = session.user.role === UserRole.ADMIN;
+  const isOwner = session.user.role === UserRole.FOODCOURT_OWNER;
 
-  // If not admin, verify if the logged-in user is accessing their own dashboard
-  if (!isAdmin && userId !== params.id) {
-    return notFound();
+  // If not admin and not the owner being viewed, redirect
+  if (!isAdmin && isOwner && session.user.id !== params.id) {
+    redirect("/login");
   }
 
-  // Get the owner's information and their foodcourt
-  const owner = await db.user.findUnique({
-    where: { id: params.id },
+  // Get owner data
+  const ownerData = await db.user.findUnique({
+    where: {
+      id: params.id,
+      role: "FOODCOURT_OWNER", // Use string literal instead of enum for Prisma
+    },
     include: {
       foodcourts: true,
     },
   });
 
-  if (!owner) {
-    return notFound();
+  if (!ownerData) {
+    redirect("/404");
   }
 
-  // Transform the Prisma User to match our shared types
-  const typedOwner: User = {
-    id: owner.id,
-    name: owner.name,
-    email: owner.email,
-    username: owner.username,
-    image: owner.image,
-    role: owner.role as unknown as UserRole,
-    foodcourts: owner.foodcourts.map((fc) => ({
-      id: fc.id,
-      name: fc.name,
-      address: fc.address,
-      description: fc.description,
-      logo: fc.logo,
-      isActive: fc.isActive,
-      createdAt: fc.createdAt,
-      updatedAt: fc.updatedAt,
-      ownerId: fc.ownerId,
-    })),
+  // Map the Prisma User to our shared User type
+  const owner: User = {
+    id: ownerData.id,
+    name: ownerData.name,
+    email: ownerData.email,
+    username: ownerData.username,
+    image: ownerData.image,
+    role: UserRole.FOODCOURT_OWNER,
+    foodcourts: ownerData.foodcourts.map(
+      (fc): Foodcourt => ({
+        id: fc.id,
+        name: fc.name,
+        description: fc.description,
+        address: fc.address,
+        logo: fc.logo,
+        isActive: fc.isActive,
+        createdAt: fc.createdAt,
+        updatedAt: fc.updatedAt,
+        ownerId: fc.ownerId,
+      }),
+    ),
   };
 
-  // Get recent orders for the foodcourt
-  const foodcourtId = owner.foodcourts[0]?.id;
-  let recentOrders: Order[] = [];
+  // Get the foodcourt
+  const foodcourt = ownerData.foodcourts[0];
+  const foodcourtId = foodcourt?.id;
 
-  if (foodcourtId) {
-    const dbOrders = await db.order.findMany({
-      where: {
-        orderItems: {
-          some: {
-            foodcourtId,
+  // Get order stats if a foodcourt exists
+  const orderStats: OrderStats = foodcourtId
+    ? {
+        // Count orders associated with this foodcourt through orderItems
+        totalOrders: await db.order.count({
+          where: {
+            orderItems: {
+              some: {
+                foodcourtId: foodcourtId,
+              },
+            },
+          },
+        }),
+        pendingOrders: await db.order.count({
+          where: {
+            orderItems: {
+              some: {
+                foodcourtId: foodcourtId,
+              },
+            },
+            status: "PENDING",
+          },
+        }),
+        preparingOrders: await db.order.count({
+          where: {
+            orderItems: {
+              some: {
+                foodcourtId: foodcourtId,
+              },
+            },
+            status: "PREPARING",
+          },
+        }),
+        readyOrders: await db.order.count({
+          where: {
+            orderItems: {
+              some: {
+                foodcourtId: foodcourtId,
+              },
+            },
+            status: "READY",
+          },
+        }),
+      }
+    : {
+        totalOrders: 0,
+        pendingOrders: 0,
+        preparingOrders: 0,
+        readyOrders: 0,
+      };
+
+  // Get recent orders if a foodcourt exists
+  const prismaOrders = foodcourtId
+    ? await db.order.findMany({
+        where: {
+          orderItems: {
+            some: {
+              foodcourtId: foodcourtId,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 5,
-      include: {
-        orderItems: {
-          include: {
-            menuItem: true,
+        include: {
+          orderItems: {
+            where: {
+              foodcourtId: foodcourtId,
+            },
+            include: {
+              menuItem: true,
+            },
           },
+          table: true,
         },
-        table: true,
-      },
-    });
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      })
+    : [];
 
-    // Transform DB orders to match our shared type
-    recentOrders = dbOrders.map((order) => ({
-      id: order.id,
-      customerName: order.customerName,
-      totalAmount: Number(order.totalAmount),
-      // Convert Prisma enum to our shared type enum
-      status: order.status as unknown as OrderStatus,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-      tableId: order.tableId,
-      orderItems: order.orderItems.map((item) => ({
+  // Map Prisma orders to match the Order type exactly
+  const recentOrders: Order[] = prismaOrders.map((order) => {
+    // Map table to match the Table type
+    const table: Table = {
+      id: order.table.id,
+      tableNumber: order.table.tableNumber,
+      capacity: order.table.capacity,
+      qrCode: order.table.qrCode,
+      isAvailable: order.table.isAvailable,
+    };
+
+    // Map order items to match the OrderItem type
+    const orderItems: OrderItem[] = order.orderItems.map((item) => {
+      // Map menu item to match the MenuItem type
+      const menuItem: MenuItem = {
+        id: item.menuItem.id,
+        name: item.menuItem.name,
+        description: item.menuItem.description,
+        price: Number(item.menuItem.price),
+        imageUrl: item.menuItem.imageUrl,
+        isAvailable: item.menuItem.isAvailable,
+        foodcourtId: item.menuItem.foodcourtId,
+        categoryId: item.menuItem.categoryId,
+      };
+
+      return {
         id: item.id,
         quantity: item.quantity,
         unitPrice: Number(item.unitPrice),
         subtotal: Number(item.subtotal),
         specialInstructions: item.specialInstructions,
-        // Convert Prisma enum to our shared type enum
-        status: item.status as unknown as OrderStatus,
+        status: item.status as OrderStatus,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         orderId: item.orderId,
         foodcourtId: item.foodcourtId,
         menuItemId: item.menuItemId,
-        menuItem: {
-          id: item.menuItem.id,
-          name: item.menuItem.name,
-          description: item.menuItem.description,
-          price: Number(item.menuItem.price),
-          imageUrl: item.menuItem.imageUrl,
-          isAvailable: item.menuItem.isAvailable,
-          foodcourtId: item.menuItem.foodcourtId,
-          categoryId: item.menuItem.categoryId,
-        },
-      })),
-      table: {
-        id: order.table.id,
-        tableNumber: order.table.tableNumber,
-        capacity: order.table.capacity,
-        qrCode: order.table.qrCode,
-        isAvailable: order.table.isAvailable,
-      },
-    }));
-  }
+        menuItem: menuItem,
+      };
+    });
 
-  // Get order statistics
-  const totalOrders = foodcourtId
-    ? await db.orderItem.count({
-        where: {
-          foodcourtId,
-        },
-      })
-    : 0;
+    // Return the complete Order object
+    return {
+      id: order.id,
+      customerName: order.customerName,
+      totalAmount: Number(order.totalAmount),
+      status: order.status as OrderStatus,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      tableId: order.tableId,
+      orderItems: orderItems,
+      table: table,
+    };
+  });
 
-  const pendingOrders = foodcourtId
-    ? await db.orderItem.count({
-        where: {
-          foodcourtId,
-          status: "PENDING", // Using string literal to match Prisma's enum
-        },
-      })
-    : 0;
-
-  const preparingOrders = foodcourtId
-    ? await db.orderItem.count({
-        where: {
-          foodcourtId,
-          status: "PREPARING", // Using string literal to match Prisma's enum
-        },
-      })
-    : 0;
-
-  const readyOrders = foodcourtId
-    ? await db.orderItem.count({
-        where: {
-          foodcourtId,
-          status: "READY", // Using string literal to match Prisma's enum
-        },
-      })
-    : 0;
-
+  // Render the OwnerDashboard component without wrapping it in DashboardLayout
   return (
     <OwnerDashboard
-      owner={typedOwner}
+      owner={owner}
       foodcourtId={foodcourtId}
       isAdmin={isAdmin}
-      orderStats={{
-        totalOrders,
-        pendingOrders,
-        preparingOrders,
-        readyOrders,
-      }}
+      orderStats={orderStats}
       recentOrders={recentOrders}
     />
   );

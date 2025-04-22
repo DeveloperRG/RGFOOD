@@ -100,8 +100,7 @@ model Foodcourt {
   
   // Relations
   owner               User      @relation(fields: [ownerId], references: [id])
-  ownerId             String
-  menuCategories      MenuCategory[]
+  ownerId             String    @unique
   menuItems           MenuItem[]
   orderItems          OrderItem[]
   ownerPermissions    OwnerPermission[]
@@ -148,10 +147,10 @@ model MenuCategory {
   name            String
   description     String?
   displayOrder    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   
-  // Relations
-  foodcourt       Foodcourt @relation(fields: [foodcourtId], references: [id])
-  foodcourtId     String
+  // Relations - only keeping the relation with menuItems
   menuItems       MenuItem[]
   
   @@map("menu_categories")
