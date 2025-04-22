@@ -2,38 +2,54 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "~/server/auth";
 
-// GET /api/foodcourt/[id]/menu - List menu items
+// GET /api/foodcourt/[foodcourtId]/menu - List menu items
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
   try {
-    const foodcourtId = params.id;
+    const session = await auth();
+
+    if (!params.id && !session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
     const available = searchParams.get("available");
 
-    // Build the where clause based on params and query parameters
-    const where: any = {
-      foodcourtId: foodcourtId, // Use the path parameter
-    };
+    let foodcourt = null;
 
-    if (categoryId) {
-      where.categoryId = categoryId;
+    // Try getting foodcourt from path param
+    if (params.id) {
+      foodcourt = await db.foodcourt.findUnique({
+        where: { id: params.id },
+      });
     }
 
-    if (available !== null) {
-      where.isAvailable = available === "true";
+    // Fallback to finding by owner ID
+    if (!foodcourt && session?.user?.id) {
+      foodcourt = await db.foodcourt.findFirst({
+        where: { ownerId: session.user.id },
+      });
     }
+
+    if (!foodcourt) {
+      return NextResponse.json(
+        { error: "Foodcourt not found" },
+        { status: 404 },
+      );
+    }
+
+    // Build where clause
+    const where: any = { foodcourtId: foodcourt.id };
+    if (categoryId) where.categoryId = categoryId;
+    if (available !== null) where.isAvailable = available === "true";
 
     const menuItems = await db.menuItem.findMany({
       where,
-      include: {
-        category: true,
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
+      include: { category: true },
+      orderBy: { updatedAt: "desc" },
     });
 
     return NextResponse.json({ menuItems }, { status: 200 });
@@ -49,16 +65,15 @@ export async function GET(
   }
 }
 
-// POST /api/foodcourt/[id]/menu - Create a new menu item (Owner only)
+
+// POST /api/foodcourt/[foodcourtId]/menu - Create a new menu item (Owner only)
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
   try {
     const session = await auth();
-    const foodcourtId = params.id;
 
-    // Check if user is authenticated
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -67,7 +82,6 @@ export async function POST(
     const { name, description, price, imageUrl, isAvailable, categoryId } =
       data;
 
-    // Validate required fields
     if (!name || !price) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -75,40 +89,30 @@ export async function POST(
       );
     }
 
-    // Convert price to the correct format
-    let priceValue: number;
-    if (typeof price === "string") {
-      priceValue = parseFloat(price);
-      if (isNaN(priceValue)) {
-        return NextResponse.json(
-          { error: "Invalid price format" },
-          { status: 400 },
-        );
-      }
-    } else {
-      priceValue = price;
+    let priceValue: number =
+      typeof price === "string" ? parseFloat(price) : price;
+    if (isNaN(priceValue)) {
+      return NextResponse.json(
+        { error: "Invalid price format" },
+        { status: 400 },
+      );
     }
 
-    // Check user permissions - both direct owner and role check
-    const [userPermission, user, foodcourt] = await Promise.all([
-      db.ownerPermission.findUnique({
-        where: {
-          ownerId_foodcourtId: {
-            ownerId: session.user.id,
-            foodcourtId: foodcourtId,
-          },
-        },
-      }),
-      db.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: true },
-      }),
-      db.foodcourt.findUnique({
-        where: { id: foodcourtId },
-      }),
-    ]);
+    // Get foodcourt either from param or by owner ID
+    let foodcourt = null;
+    if (params.id) {
+      foodcourt = await db.foodcourt.findUnique({
+        where: { id: params.id },
+      });
+    }
 
-    // Verify foodcourt exists
+    // If not found or not passed in params, try getting foodcourt from ownerId (one-to-one)
+    if (!foodcourt) {
+      foodcourt = await db.foodcourt.findFirst({
+        where: { ownerId: session.user.id },
+      });
+    }
+
     if (!foodcourt) {
       return NextResponse.json(
         { error: "Foodcourt not found" },
@@ -116,7 +120,22 @@ export async function POST(
       );
     }
 
-    // Check if user is foodcourt owner or admin
+    // Check permission
+    const [userPermission, user] = await Promise.all([
+      db.ownerPermission.findUnique({
+        where: {
+          ownerId_foodcourtId: {
+            ownerId: session.user.id,
+            foodcourtId: foodcourt.id,
+          },
+        },
+      }),
+      db.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+      }),
+    ]);
+
     const isAdmin = user?.role === "ADMIN";
     const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
     const hasPermission =
@@ -143,18 +162,18 @@ export async function POST(
         description,
         price: priceValue,
         imageUrl,
-        isAvailable: isAvailable ?? true,
-        foodcourtId,
-        categoryId: categoryId || null,
+        isAvailable,
+        foodcourtId: foodcourt.id,
+        categoryId,
       },
     });
 
     return NextResponse.json(menuItem, { status: 201 });
   } catch (error) {
-    console.error("Failed to create menu item:", error);
+    console.error("Failed to add menu item:", error);
     return NextResponse.json(
       {
-        error: "Failed to create menu item",
+        error: "Failed to add menu item",
         details: (error as Error).message,
       },
       { status: 500 },

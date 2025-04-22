@@ -1,3 +1,5 @@
+// ~/app/(dashboard)/owner/[id]/foodcourt/page.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,6 +10,8 @@ import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { Switch } from "~/components/ui/switch";
 import { toast } from "sonner";
+import { Skeleton } from "~/components/ui/skeleton";
+import { Card, CardContent } from "~/components/ui/card";
 
 export default function FoodcourtManagementPage() {
   const { id } = useParams();
@@ -19,6 +23,7 @@ export default function FoodcourtManagementPage() {
     isActive: true,
   });
   const [loading, setLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     async function fetchFoodcourt() {
@@ -56,6 +61,7 @@ export default function FoodcourtManagementPage() {
       });
       if (res.ok) {
         toast.success("Foodcourt updated successfully");
+        setEditMode(false);
       } else {
         toast.error("Failed to update foodcourt");
       }
@@ -71,60 +77,115 @@ export default function FoodcourtManagementPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   }
 
-  if (loading) return <p className="p-4">Loading...</p>;
+  if (loading) {
+    return (
+      <div className="p-4">
+        <Skeleton className="mb-4 h-8 w-1/3" />
+        <Skeleton className="mb-2 h-6 w-full" />
+        <Skeleton className="mb-2 h-6 w-full" />
+        <Skeleton className="mb-2 h-6 w-full" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className="mx-auto max-w-2xl space-y-4 p-4">
       <h1 className="text-2xl font-bold">Manage Your Foodcourt</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="name">Name</Label>
-          <Input
-            id="name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label htmlFor="address">Address</Label>
-          <Input
-            id="address"
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-          />
-        </div>
-        <div>
-          <Label htmlFor="logo">Logo URL</Label>
-          <Input
-            id="logo"
-            name="logo"
-            value={formData.logo}
-            onChange={handleChange}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="isActive">Active</Label>
-          <Switch
-            id="isActive"
-            checked={formData.isActive}
-            onCheckedChange={(val) =>
-              setFormData((prev) => ({ ...prev, isActive: val }))
-            }
-          />
-        </div>
-        <Button type="submit">Update</Button>
-      </form>
+
+      {!editMode ? (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <div>
+              <strong>Name:</strong> {formData.name}
+            </div>
+            <div>
+              <strong>Description:</strong> {formData.description}
+            </div>
+            <div>
+              <strong>Address:</strong> {formData.address}
+            </div>
+            <div>
+              <strong>Logo:</strong>{" "}
+              <img
+                src={formData.logo}
+                alt="Logo"
+                className="mt-2 h-16 rounded"
+              />
+            </div>
+            <div>
+              <strong>Status:</strong>{" "}
+              <span
+                className={
+                  formData.isActive ? "text-green-600" : "text-red-600"
+                }
+              >
+                {formData.isActive ? "Active" : "Inactive"}
+              </span>
+            </div>
+            <Button onClick={() => setEditMode(true)}>Edit</Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="address">Address</Label>
+            <Input
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="logo">Logo URL</Label>
+            <Input
+              id="logo"
+              name="logo"
+              value={formData.logo}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="isActive">Active</Label>
+            <Switch
+              id="isActive"
+              checked={formData.isActive}
+              onCheckedChange={(val) =>
+                setFormData((prev) => ({ ...prev, isActive: val }))
+              }
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit">Save Changes</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditMode(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
