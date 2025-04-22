@@ -132,15 +132,6 @@ export function DashboardNav({ children, user }: DashboardNavProps) {
     );
   }
 
-  // Add settings for both roles
-  navigationItems.push({
-    name: "Settings",
-    href: isAdmin ? "/admin/settings" : `/owner/${userId}/settings`,
-    icon: Settings,
-    current:
-      pathname === (isAdmin ? "/admin/settings" : `/owner/${userId}/settings`),
-  });
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar toggle */}
