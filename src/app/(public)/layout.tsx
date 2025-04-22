@@ -22,7 +22,7 @@ export default function PublicLayout({
           {children}
         </Suspense>
       </main>
-
+{/* 
       <footer className="mt-12 border-t bg-white py-6">
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center justify-between md:flex-row">
@@ -44,7 +44,7 @@ export default function PublicLayout({
             </div>
           </div>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }
