@@ -75,6 +75,22 @@ model Foodcourt {
   @@map("foodcourts")
 }
 
+// Foodcourt Categories
+model FoodcourtCategory {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  foodcourt   Foodcourt @relation(fields: [foodcourtId], references: [id])
+  foodcourtId String
+
+  @@map("foodcourt_categories")
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
