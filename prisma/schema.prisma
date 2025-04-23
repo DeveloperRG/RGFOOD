@@ -147,8 +147,6 @@ model MenuCategory {
   name         String
   description  String?
   displayOrder Int        @default(0)
-  foodcourtId  String
-  foodcourts   Foodcourt  @relation(fields: [foodcourtId], references: [id])
   menuItems    MenuItem[]
 
   @@map("menu_categories")
