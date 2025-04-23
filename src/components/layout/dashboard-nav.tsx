@@ -1,10 +1,10 @@
-// ~/components/layout/dashboard-layout.tsx
+// ~/components/layout/dashboard-nav.tsx
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserRole } from "~/types/shared-types"; // Assuming you've created this
+import { UserRole } from "~/lib/shared-types";
 import {
   User,
   LogOut,
@@ -16,6 +16,10 @@ import {
   ChevronDown,
   Menu,
   X,
+  FileText,
+  Utensils,
+  Table,
+  BarChart,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "~/components/ui/button";
@@ -29,30 +33,34 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { cn } from "~/lib/utils";
 
-interface DashboardLayoutProps {
+interface DashboardNavProps {
   children: React.ReactNode;
   user: {
     name?: string | null;
     email?: string | null;
     image?: string | null;
     role?: UserRole;
+    id?: string | null;
   };
 }
 
-export function DashboardLayout({ children, user }: DashboardLayoutProps) {
+export function DashboardNav({ children, user }: DashboardNavProps) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const isAdmin = user?.role === UserRole.ADMIN;
   const isOwner = user?.role === UserRole.FOODCOURT_OWNER;
+  const userId = user?.id || "";
 
   // Define navigation items based on user role
   const navigationItems = [
     {
       name: "Dashboard",
-      href: isAdmin ? "/admin" : "/owner",
+      href: isAdmin ? "/admin" : `/owner/${userId}`,
       icon: LayoutDashboard,
-      current: pathname === (isAdmin ? "/admin" : "/owner"),
+      current: isAdmin
+        ? pathname === "/admin"
+        : pathname === `/owner/${userId}`,
     },
   ];
 
@@ -70,7 +78,23 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
         name: "Owners",
         href: "/admin/owners",
         icon: Users,
-        current: pathname === "/admin/owners",
+        current:
+          pathname === "/admin/owners" || pathname.startsWith("/admin/owners/"),
+      },
+      {
+        name: "Tables",
+        href: "/admin/tables",
+        icon: Table,
+        current:
+          pathname === "/admin/tables" || pathname.startsWith("/admin/tables/"),
+      },
+      {
+        name: "Reports",
+        href: "/admin/reports",
+        icon: FileText,
+        current:
+          pathname === "/admin/reports" ||
+          pathname.startsWith("/admin/reports/"),
       },
     );
   }
@@ -78,29 +102,35 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
   if (isOwner) {
     navigationItems.push(
       {
-        name: "Orders",
-        href: "/owner/orders",
-        icon: ShoppingCart,
-        current:
-          pathname === "/owner/orders" || pathname.startsWith("/owner/orders/"),
+        name: "Foodcourt",
+        href: `/owner/${userId}/foodcourt`,
+        icon: Store,
+        current: pathname === `/owner/${userId}/foodcourt`,
       },
       {
-        name: "My Stalls",
-        href: "/owner/stalls",
-        icon: Store,
+        name: "Menu",
+        href: `/owner/${userId}/foodcourt/menu`,
+        icon: Utensils,
         current:
-          pathname === "/owner/stalls" || pathname.startsWith("/owner/stalls/"),
+          pathname === `/owner/${userId}/foodcourt/menu` ||
+          pathname.startsWith(`/owner/${userId}/foodcourt/menu/`),
+      },
+      {
+        name: "Orders",
+        href: `/owner/${userId}/foodcourt/orders`,
+        icon: ShoppingCart,
+        current:
+          pathname === `/owner/${userId}/foodcourt/orders` ||
+          pathname.startsWith(`/owner/${userId}/foodcourt/orders/`),
+      },
+      {
+        name: "Statistics",
+        href: `/owner/${userId}/stats`,
+        icon: BarChart,
+        current: pathname === `/owner/${userId}/stats`,
       },
     );
   }
-
-  // Add settings for both roles
-  navigationItems.push({
-    name: "Settings",
-    href: isAdmin ? "/admin/settings" : "/owner/settings",
-    icon: Settings,
-    current: pathname === (isAdmin ? "/admin/settings" : "/owner/settings"),
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -185,12 +215,20 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href={isAdmin ? "/admin/profile" : "/owner/profile"}>
+                  <Link
+                    href={
+                      isAdmin ? "/admin/profile" : `/owner/${userId}/profile`
+                    }
+                  >
                     Profile
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href={isAdmin ? "/admin/settings" : "/owner/settings"}>
+                  <Link
+                    href={
+                      isAdmin ? "/admin/settings" : `/owner/${userId}/settings`
+                    }
+                  >
                     Settings
                   </Link>
                 </DropdownMenuItem>

@@ -69,15 +69,21 @@ export async function POST(request: Request) {
       },
     });
 
-    // Log the attempt to send an email for debugging
-    console.log("Attempting to resend verification email to:", email);
+    console.log("Created new verification token:", verificationToken);
+    console.log("For user:", email);
 
     // Send verification email
-    const verificationUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`;
+    try {
+      console.log("Attempting to resend verification email to:", email);
+      const verificationUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`;
+      console.log("Using verification URL:", verificationUrl);
+      console.log(
+        "Using Resend API key:",
+        process.env.RESEND_API_KEY ? "Key is set" : "Key is missing",
+      );
 
-    await resend.emails
-      .send({
-        from: "onboarding@resend.dev", // Use this for testing or your verified domain
+      const data = await resend.emails.send({
+        from: process.env.EMAIL_FROM || "onboarding@resend.dev",
         to: email,
         subject: "Verify your FoodCourt account",
         html: `
@@ -101,19 +107,52 @@ export async function POST(request: Request) {
           </div>
         </div>
       `,
-      })
-      .then(() => {
-        console.log("Verification email sent successfully to:", email);
-      })
-      .catch((emailError) => {
-        console.error("Email sending error details:", emailError);
-        throw emailError; // Re-throw to be caught by the outer try/catch
       });
 
-    return NextResponse.json(
-      { message: "Verification email sent. Please check your inbox." },
-      { status: 200 },
-    );
+      console.log("Email sent successfully, response:", data);
+
+      return NextResponse.json(
+        { message: "Verification email sent. Please check your inbox." },
+        { status: 200 },
+      );
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
+
+      // Extract detailed error information for debugging
+      const errorDetails =
+        error instanceof Error
+          ? {
+              message: error.message,
+              name: error.name,
+              stack: error.stack,
+            }
+          : "Unknown error type";
+
+      // Check for specific error types
+      let errorMessage = "Failed to send verification email";
+
+      if (error instanceof Error) {
+        if (error.message.includes("authentication")) {
+          errorMessage =
+            "Email authentication failed. Check your Resend API key.";
+        } else if (error.message.includes("rate limit")) {
+          errorMessage = "Email rate limit exceeded. Please try again later.";
+        } else if (error.message.includes("network")) {
+          errorMessage =
+            "Network error occurred when sending email. Check your internet connection.";
+        }
+      }
+
+      return NextResponse.json(
+        {
+          message: errorMessage,
+          error: error instanceof Error ? error.message : "Unknown error",
+          details: errorDetails,
+        },
+        { status: 500 },
+      );
+    }
   } catch (error) {
     console.error("Resend verification error:", error);
     return NextResponse.json(

@@ -47,50 +47,6 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-model Foodcourt {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  address     String
-  logo        String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relasi owner yang diubah menjadi opsional
-  ownerId String?
-  owner   User?   @relation("FoodcourtOwner", fields: [ownerId], references: [id])
-
-  // Relasi creator yang baru (wajib diisi)
-  creatorId String
-  creator   User   @relation("FoodcourtCreator", fields: [creatorId], references: [id])
-
-  // Relasi lainnya tetap sama
-  menuCategories     MenuCategory[]
-  menuItems          MenuItem[]
-  orderItems         OrderItem[]
-  ownerNotifications OwnerNotification[]
-  ownerPermissions   OwnerPermission[]
-
-  @@map("foodcourts")
-}
-
-// Foodcourt Categories
-model FoodcourtCategory {
-  id           String   @id @default(cuid())
-  name         String
-  description  String?
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  foodcourt   Foodcourt @relation(fields: [foodcourtId], references: [id])
-  foodcourtId String
-
-  @@map("foodcourt_categories")
-}
-
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -104,17 +60,51 @@ model User {
   updatedAt     DateTime  @updatedAt
   lastLogin     DateTime?
 
-  // Auth.js relations
-  accounts Account[]
-  sessions Session[]
-
-  // Application relations yang diubah
+  accounts          Account[]
+  sessions          Session[]
   ownedFoodcourts   Foodcourt[]       @relation("FoodcourtOwner")
   createdFoodcourts Foodcourt[]       @relation("FoodcourtCreator")
   permissions       OwnerPermission[]
   updatedLogs       OrderLog[]
 
   @@map("users")
+}
+
+model Foodcourt {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  address     String
+  logo        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ownerId String?
+  owner   User?   @relation("FoodcourtOwner", fields: [ownerId], references: [id])
+  creatorId String
+  creator   User   @relation("FoodcourtCreator", fields: [creatorId], references: [id])
+
+  menuCategories     MenuCategory[]
+  menuItems          MenuItem[]
+  orderItems         OrderItem[]
+  ownerNotifications OwnerNotification[]
+  ownerPermissions   OwnerPermission[]
+
+  @@map("foodcourts")
+}
+
+model FoodcourtCategory {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  foodcourtId  String
+  foodcourt    Foodcourt @relation(fields: [foodcourtId], references: [id])
+
+  @@map("foodcourt_categories")
 }
 
 model Table {
@@ -143,11 +133,13 @@ model TableSession {
 }
 
 model MenuCategory {
-  id           String     @id @default(cuid())
-  name         String
-  description  String?
-  displayOrder Int        @default(0)
-  menuItems    MenuItem[]
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  displayOrder    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  menuItems       MenuItem[]
 
   @@map("menu_categories")
 }
@@ -178,10 +170,10 @@ model Order {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   tableId            String
+  table              Table               @relation(fields: [tableId], references: [id])
   orderItems         OrderItem[]
   orderLogs          OrderLog[]
   orderNotifications OrderNotification[]
-  table              Table               @relation(fields: [tableId], references: [id])
   ownerNotifications OwnerNotification[]
 
   @@map("orders")
@@ -199,9 +191,9 @@ model OrderItem {
   orderId             String
   foodcourtId         String
   menuItemId          String
+  order               Order       @relation(fields: [orderId], references: [id])
   foodcourt           Foodcourt   @relation(fields: [foodcourtId], references: [id])
   menuItem            MenuItem    @relation(fields: [menuItemId], references: [id])
-  order               Order       @relation(fields: [orderId], references: [id])
   orderLogs           OrderLog[]
 
   @@map("order_items")
@@ -214,8 +206,8 @@ model OwnerPermission {
   canUpdateOrders Boolean   @default(true)
   ownerId         String
   foodcourtId     String
-  foodcourt       Foodcourt @relation(fields: [foodcourtId], references: [id])
   owner           User      @relation(fields: [ownerId], references: [id])
+  foodcourt       Foodcourt @relation(fields: [foodcourtId], references: [id])
 
   @@unique([ownerId, foodcourtId])
   @@map("owner_permissions")

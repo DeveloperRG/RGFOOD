@@ -106,7 +106,7 @@ export default function MenuPage() {
     : foodItems.filter(item => item.category === activeCategory);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-full bg-green">
       {/* Header with back button, search, and cart */}
       <header className="fixed top-0 left-0 right-0 z-10 bg-white p-4 shadow-sm">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
@@ -131,7 +131,7 @@ export default function MenuPage() {
         </div>
       </header>
 
-      <div className="pt-20 pb-6 px-4 md:px-8 max-w-6xl mx-auto">
+      <div className="pt-20 pb-6 px-4 m-screen md:px-7 mx-auto">
         {/* Restaurant profile */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 relative mb-3">
@@ -143,7 +143,7 @@ export default function MenuPage() {
             />
           </div>
           <h1 className="text-xl font-bold text-center">Coffe Memek</h1>
-          <p className="text-sm text-gray-500 text-center">Deskripsi tentang stand</p>
+          <p className="text-sm text-gray-500 text-center mt-2">kopi dari beras ketan pilihan dengan ph rendah</p>
         </div>
 
         {/* Category tabs */}

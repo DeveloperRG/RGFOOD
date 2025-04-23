@@ -1,16 +1,16 @@
-// ~/app/(dashboard)/admin/page.tsx
+// ~/src/app/(dashboard)/admin/page.tsx
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-import { UserRole } from "~/types/shared-types";
-import AdminDashboardClient from "./client";
+import { UserRole } from "~/lib/shared-types";
+import { AdminDashboard } from "~/components/dashboard/admin/admin-dashboard";
 
 export default async function AdminDashboardPage() {
   const session = await auth();
 
   // Redirect if not logged in or not an admin
   if (!session?.user || session.user.role !== UserRole.ADMIN) {
-    redirect("/unauthorized");
+    redirect("/login");
   }
 
   // Get counts for dashboard metrics
@@ -43,10 +43,8 @@ export default async function AdminDashboardPage() {
     take: 5,
   });
 
-  // No longer fetching recent orders
-
   return (
-    <AdminDashboardClient
+    <AdminDashboard
       user={session.user}
       metrics={{
         foodCourtCount,

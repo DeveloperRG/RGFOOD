@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const token = searchParams.get("token");
 
     if (!token) {
+      console.error("Verification error: Missing token");
       return NextResponse.redirect(
         new URL("/verification-error?error=invalid-token", request.url),
       );
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
     });
 
     if (!verificationToken) {
+      console.error("Verification error: Token not found in database");
       return NextResponse.redirect(
         new URL("/verification-error?error=invalid-token", request.url),
       );
@@ -27,6 +29,11 @@ export async function GET(request: Request) {
 
     // Check if token is expired
     if (new Date() > verificationToken.expires) {
+      console.error("Verification error: Token expired");
+      // Delete the expired token
+      await db.verificationToken.delete({
+        where: { token },
+      });
       return NextResponse.redirect(
         new URL("/verification-error?error=token-expired", request.url),
       );
@@ -38,10 +45,13 @@ export async function GET(request: Request) {
     });
 
     if (!user) {
+      console.error("Verification error: User not found");
       return NextResponse.redirect(
         new URL("/verification-error?error=user-not-found", request.url),
       );
     }
+
+    console.log(`Verifying email for user: ${user.email} (${user.id})`);
 
     // Update user's email verification status
     await db.user.update({
@@ -53,6 +63,8 @@ export async function GET(request: Request) {
     await db.verificationToken.delete({
       where: { token },
     });
+
+    console.log(`User ${user.email} verified successfully. Role: ${user.role}`);
 
     // Redirect based on user role
     const redirectUrl = getRedirectUrlByRole(user.role as UserRole);
