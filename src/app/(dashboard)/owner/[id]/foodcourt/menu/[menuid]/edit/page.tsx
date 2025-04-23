@@ -1,3 +1,5 @@
+// ~/app/(dashboard)/owner/[id]/foodcourt/menu/[menuId]/edit/page.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";

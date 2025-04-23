@@ -85,7 +85,7 @@ model Foodcourt {
   creatorId String
   creator   User   @relation("FoodcourtCreator", fields: [creatorId], references: [id])
 
-  menuCategories     MenuCategory[]
+  foodcourtCategories     FoodcourtCategory[]
   menuItems          MenuItem[]
   orderItems         OrderItem[]
   ownerNotifications OwnerNotification[]

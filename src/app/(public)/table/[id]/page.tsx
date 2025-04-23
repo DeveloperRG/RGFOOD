@@ -1,249 +1,238 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import { FaStar, FaStarHalfAlt, FaTruck, FaClock } from 'react-icons/fa';
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { Input } from "~/components/ui/input";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import { Loader2, Search, X, ArrowRight } from "lucide-react";
 
-// Interface for our data
-interface FoodStand {
-  id: number;
+interface Foodcourt {
+  id: string;
   name: string;
-  type: string[];
-  rating: number;
-  image: string;
+  description: string;
+  logo: string;
+  address: string;
 }
 
-// Sample data for food stands
-const popularStands: FoodStand[] = [
-  {
-    id: 1,
-    name: 'Coffe Payakumbuh',
-    type: ['Jajanan'],
-    rating: 4.9,
-    image: '/popular-stand-1.jpg'
-  },
-  {
-    id: 2,
-    name: 'Penjualan Kue Menek',
-    type: ['Jajanan'],
-    rating: 4.9,
-    image: '/popular-stand-2.jpg'
-  }
-];
+interface PaginationInfo {
+  total: number;
+  limit: number;
+  offset: number;
+}
 
-// Sample data for other stands
-const otherStands: FoodStand[] = [
-  {
-    id: 3,
-    name: 'Stand Roti dan Kue Memek',
-    type: ['Minuman', 'roti'],
-    rating: 4.9,
-    image: '/stand-1.jpg'
-  },
-  {
-    id: 4,
-    name: 'Stand Minuman Kambing',
-    type: ['Minuman', 'roti'],
-    rating: 4.9,
-    image: '/stand-2.jpg'
-  },
-  {
-    id: 5,
-    name: 'Stand Cemilan Ibu Hamil',
-    type: ['Minuman', 'roti'],
-    rating: 4.9,
-    image: '/stand-3.jpg'
-  }
-];
+export default function TablePage() {
+  const params = useParams();
+  const tableId = params.tableId as string;
 
-export default function DaftarStand() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [foodcourts, setFoodcourts] = useState<Foodcourt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    total: 0,
+    limit: 100,
+    offset: 0,
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredFoodcourts, setFilteredFoodcourts] = useState<Foodcourt[]>([]);
+
+  useEffect(() => {
+    if (tableId) {
+      localStorage.setItem("tableId", tableId);
+    }
+
+    async function fetchFoodcourts() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/public/foodcourt`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch foodcourts");
+        }
+
+        const data = await response.json();
+        setFoodcourts(data.foodcourts);
+        setFilteredFoodcourts(data.foodcourts);
+        setPagination(data.pagination);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchFoodcourts();
+  }, [tableId, pagination.limit, pagination.offset]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredFoodcourts(foodcourts);
+    } else {
+      const filtered = foodcourts.filter(
+        (foodcourt) =>
+          foodcourt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          foodcourt.description
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()),
+      );
+      setFilteredFoodcourts(filtered);
+    }
+  }, [searchQuery, foodcourts]);
+
+  if (loading && foodcourts.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500">Error: {error}</p>
+          <Button className="mt-4" onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white p-4 flex justify-between items-center shadow-sm sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-gray-800">Stand Stand</h1>
-        <div className="flex items-center">
-          <button className="bg-white p-2 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-          </button>
+    <div className="bg-muted/40 min-h-screen pb-28">
+      {/* Table Info */}
+      <div className="bg-green-50 p-4 text-center text-green-700">
+        <span className="font-medium">Table #{tableId}</span> - Your orders will
+        be delivered here
+      </div>
+
+      {/* Search */}
+      <div className="mx-auto max-w-2xl p-4">
+        <div className="relative">
+          <Input
+            placeholder="Cari Stand"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+          <Search className="text-muted-foreground absolute top-2.5 left-3 h-5 w-5" />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-1.5 right-1 h-6 w-6"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-      </header>
+      </div>
 
-      <main className="p-4 max-w-full">
-        {/* Search Bar */}
-        <div className="mb-4 relative flex items-center">
-          <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 pl-7 flex items-center pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              placeholder="Cari Stand"
-              className="pl-13 pr-4 py-2 w-full rounded-lg bg-white border-5 focus:ring-2 focus:ring-lime-300 focus:outline-none"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <button className="ml-2 p-2 bg-lime-600 rounded-lg flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Categories Section */}
-        <section className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-semibold">Kategori Kuliner</h2>
-            <a href="#" className="text-sm text-gray-600 flex items-center">
-              Lihat Semua
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
-          
-          {/* Category Icons */}
-          <div className="grid grid-cols-4 gap-2 md:gap-4"> 
-
-          <div className="flex flex-col items-center bg-lime-500 rounded-lg">
-            <div className="bg-lime-500 p-6 rounded-lg mb-1 relative h-40">
-              <div className="rounded-lg absolute inset-0 opacity-500 w-38"></div>
-              <div className="relative z-10 flex flex-col justify-center">
-                <Image 
-                  src="https://cdn-icons-png.flaticon.com/512/2276/2276931.png"
-                  alt="Bibimbap Icon"
-                  width={100}
-                  height={100}
-                />
-                 <span className="text-base mt-2 m-auto">Semua</span>
-              </div>
-            </div>
-          </div>
-
-            
-            <div className="flex flex-col items-center bg-lime-500 rounded-lg">
-              <div className="bg-lime-500 p-8 rounded-lg mb-1">
-                <div className='justify-center flex flex-col'>
-                <Image 
-                  src="https://cdn-icons-png.flaticon.com/512/2515/2515241.png"
-                  alt="Bibimbap Icon"
-                  width={90}
-                  height={100}
-                />
-                 <span className="text-base mt-3 m-auto">Jajanan</span>
-              </div>
-              </div>
-            </div>
-            
-            <div className="flex flex-col items-center bg-lime-500 rounded-lg">
-              <div className="bg-lime-500 p-8 rounded-lg mb-1">
-                <div className='justify-center flex flex-col'>
-                <Image 
-                  src="https://cdn-icons-png.flaticon.com/512/2738/2738730.png"
-                  alt="Bibimbap Icon"
-                  width={90}
-                  height={100}
-                />
-                 <span className="text-base mt-3 m-auto">Minuman</span>
-              </div>
-              </div>
-            </div>
-            
-          <div className="flex flex-col items-center bg-lime-500 rounded-lg">
-              <div className="bg-lime-500 p-8 rounded-lg mb-1">
-                <div className='justify-center flex flex-col'>
-                <Image 
-                  src="https://cdn-icons-png.flaticon.com/512/2713/2713563.png"
-                  alt="Bibimbap Icon"
-                  width={90}
-                  height={100}
-                />
-                 <span className="text-base mt-3 m-auto">Minuman</span>
-              </div>
-              </div>
-            </div>
-
-          </div>
-        </section>
-
-        {/* Popular Stands */}
-        <section className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-semibold">Sering Dikunjungi</h2>
-            <a href="#" className="text-sm text-gray-600 flex items-center">
-              Lihat Semua
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {popularStands.map((stand) => (
-              <div key={stand.id} className="bg-white rounded-lg overflow-hidden shadow-sm">
-               
-                <div className="relative h-40 w-full">
-                  <div className="absolute inset-0 bg-gray-300">
-                    {/* Replace with actual Image component when you have real images */}
-                    <div className="w-full h-full bg-gray-300 flex items-center justify-center">
-                      <span className="text-gray-500">Image</span>
-                    </div>
+      {/* List */}
+      <div className="mx-auto max-w-4xl space-y-4 px-4">
+        {filteredFoodcourts.length > 0 ? (
+          filteredFoodcourts.map((foodcourt) => (
+            <Link
+              key={foodcourt.id}
+              href={`/table/${tableId}/foodcourts/${foodcourt.id}`}
+              className="block"
+            >
+              <Card className="transition hover:shadow-lg">
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className="h-16 w-16 overflow-hidden rounded-md bg-gray-100">
+                    {foodcourt.logo ? (
+                      <img
+                        src={foodcourt.logo}
+                        alt={foodcourt.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-gray-400">
+                        <StoreIcon />
+                      </div>
+                    )}
                   </div>
-                </div>
-                
-                <div className="p-3">
-                  <h3 className="font-medium">{stand.name}</h3>
-                  <p className="text-sm text-gray-500">{stand.type.join(', ')}</p>
-                  <div className="flex items-center mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    <span className="text-sm ml-1">{stand.rating}</span>
+                  <div className="flex-1">
+                    <h3 className="text-base font-semibold">
+                      {foodcourt.name}
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      {foodcourt.address}
+                    </p>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+                  <ArrowRight className="text-green-500" />
+                </CardContent>
+              </Card>
+            </Link>
+          ))
+        ) : (
+          <Card className="p-8 text-center">
+            <p className="text-muted-foreground">
+              {searchQuery
+                ? `Tidak ada stand cocok dengan "${searchQuery}"`
+                : "Belum ada stand yang tersedia."}
+            </p>
+            {searchQuery && (
+              <Button className="mt-4" onClick={() => setSearchQuery("")}>
+                Hapus Pencarian
+              </Button>
+            )}
+          </Card>
+        )}
+      </div>
 
-        {/* Other Stands */}
-        <section>
-          {otherStands.map((stand) => (
-            <div key={stand.id} className="bg-lime-100 rounded-lg p-3 mb-4 flex items-center">
-              <div className="w-30 h-30 bg-gray-300 rounded-lg mr-3 ml-2 flex-shrink-0">
-                
-                {/* Replace with actual Image component when you have real images */}
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-gray-500">Image</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-medium">{stand.name}</h3>
-                <p className="text-sm text-gray-600">{stand.type.join(', ')}</p>
-                <div className="flex items-center mt-5">
-                <div className="flex items-center mb-2">
-                  <div className="flex text-yellow-400">
-                    <FaStar />
-                    <FaStar />
-                    <FaStar />
-                    <FaStar />
-                    <FaStarHalfAlt />
-                  </div>
-                  <span className="text-gray-600 text-sm ml-2">(4.5/5)</span>
-                </div>
-                </div>
-              </div>
+      {/* Cart Button */}
+      {(() => {
+        const cart =
+          typeof window !== "undefined"
+            ? JSON.parse(localStorage.getItem("cart") || "[]")
+            : [];
+        const itemCount = cart.reduce(
+          (sum: number, item: any) => sum + item.quantity,
+          0,
+        );
+
+        if (itemCount > 0) {
+          return (
+            <div className="fixed inset-x-0 bottom-0 z-50 bg-white px-4 py-3 shadow-md">
+              <Link href="/cart">
+                <Button className="w-full bg-green-500 text-white hover:bg-green-600">
+                  Lihat Keranjang ({itemCount} item)
+                </Button>
+              </Link>
             </div>
-          ))}
-        </section>
-      </main>
+          );
+        }
+        return null;
+      })()}
     </div>
   );
-}  
+}
+
+function StoreIcon() {
+  return (
+    <svg
+      className="h-8 w-8"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 9a2 2 0 012-2h.93a2 2 0 001.66-.89l.81-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.66.89l.81 1.22a2 2 0 001.66.89H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  );
+}

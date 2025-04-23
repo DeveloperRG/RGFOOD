@@ -18,21 +18,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { ChevronLeft, Save, ImagePlus } from "lucide-react";
+import { ChevronLeft, Save, ImagePlus, X, Loader2 } from "lucide-react";
 import { Skeleton } from "~/components/ui/skeleton";
+
+interface Category {
+  id: string;
+  name: string;
+}
 
 export default function NewMenuItemPage() {
   const { id } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     price: "",
     imageUrl: "",
-    category: "",
+    categoryId: "",
     isAvailable: true,
   });
   const [newCategory, setNewCategory] = useState("");
@@ -42,14 +47,17 @@ export default function NewMenuItemPage() {
     async function fetchCategories() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/foodcourt/${id}/menu/categories`);
+        // Use standalone categories API just like in the edit page
+        const res = await fetch(`/api/categories`);
         if (res.ok) {
-          const data = await res.json();
-          setCategories(data);
+          const { categories } = await res.json();
+          setCategories(categories || []);
         } else {
+          console.error("Failed to fetch categories:", await res.text());
           toast.error("Failed to load categories");
         }
       } catch (err) {
+        console.error("Error fetching categories:", err);
         toast.error("Something went wrong");
       } finally {
         setLoading(false);
@@ -79,7 +87,8 @@ export default function NewMenuItemPage() {
     if (!newCategory.trim()) return;
 
     try {
-      const res = await fetch(`/api/foodcourt/${id}/menu/categories`, {
+      // Use standalone categories API for adding new category
+      const res = await fetch(`/api/categories`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newCategory.trim() }),
@@ -87,17 +96,24 @@ export default function NewMenuItemPage() {
 
       if (res.ok) {
         const category = await res.json();
-        setCategories([...categories, category.name]);
-        setFormData((prev) => ({ ...prev, category: category.name }));
+        setCategories([...categories, category]);
+        setFormData((prev) => ({ ...prev, categoryId: category.id }));
         setNewCategory("");
         setShowNewCategoryInput(false);
         toast.success("Category added");
       } else {
+        const errorText = await res.text();
+        console.error("Failed to add category:", errorText);
         toast.error("Failed to add category");
       }
     } catch (err) {
+      console.error("Error adding category:", err);
       toast.error("An error occurred");
     }
+  }
+
+  function clearImage() {
+    setFormData((prev) => ({ ...prev, imageUrl: "" }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -114,30 +130,35 @@ export default function NewMenuItemPage() {
       return;
     }
 
-    if (!formData.category) {
-      toast.error("Category is required");
-      return;
-    }
-
     setSubmitting(true);
+
+    // Prepare the data for submission with the proper types
+    const submissionData = {
+      name: formData.name,
+      description: formData.description,
+      price: parseFloat(formData.price),
+      imageUrl: formData.imageUrl,
+      categoryId: formData.categoryId === "null" ? null : formData.categoryId,
+      isAvailable: formData.isAvailable,
+    };
 
     try {
       const res = await fetch(`/api/foodcourt/${id}/menu`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-        }),
+        body: JSON.stringify(submissionData),
       });
 
       if (res.ok) {
         toast.success("Menu item added successfully");
         router.push(`/owner/${id}/foodcourt/menu`);
       } else {
+        const errorText = await res.text();
+        console.error("Failed to add menu item:", errorText);
         toast.error("Failed to add menu item");
       }
     } catch (err) {
+      console.error("Error during submission:", err);
       toast.error("An error occurred");
     } finally {
       setSubmitting(false);
@@ -146,8 +167,11 @@ export default function NewMenuItemPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4">
-        <Skeleton className="h-8 w-1/3" />
+      <div className="mx-auto max-w-3xl space-y-6 p-4">
+        <div className="flex items-center">
+          <Skeleton className="h-8 w-48" />
+        </div>
+        <Skeleton className="h-10 w-1/3" />
         <Card>
           <CardHeader>
             <Skeleton className="h-6 w-36" />
@@ -257,21 +281,25 @@ export default function NewMenuItemPage() {
                   </div>
                 ) : (
                   <div>
-                    <Label htmlFor="category">Category *</Label>
+                    <Label htmlFor="categoryId">Category *</Label>
                     <div className="flex gap-2">
                       <Select
-                        value={formData.category}
+                        value={formData.categoryId}
                         onValueChange={(value) =>
-                          setFormData((prev) => ({ ...prev, category: value }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            categoryId: value,
+                          }))
                         }
                       >
-                        <SelectTrigger id="category" className="w-full">
+                        <SelectTrigger id="categoryId" className="w-full">
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="null">No Category</SelectItem>
                           {categories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -293,7 +321,7 @@ export default function NewMenuItemPage() {
             <div className="space-y-2">
               <Label htmlFor="imageUrl">Image URL</Label>
               <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
-                <div className="md:col-span-2">
+                <div className="relative md:col-span-2">
                   <Input
                     id="imageUrl"
                     name="imageUrl"
@@ -301,13 +329,22 @@ export default function NewMenuItemPage() {
                     onChange={handleChange}
                     placeholder="https://example.com/image.jpg"
                   />
+                  {formData.imageUrl && (
+                    <button
+                      type="button"
+                      className="hover:bg-muted absolute top-2 right-2 rounded-full p-1"
+                      onClick={clearImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-                <div className="flex items-center justify-center rounded border p-4">
+                <div className="flex h-24 items-center justify-center rounded border p-4">
                   {formData.imageUrl ? (
                     <img
                       src={formData.imageUrl}
                       alt="Preview"
-                      className="max-h-24 object-contain"
+                      className="max-h-20 max-w-full object-contain"
                       onError={() =>
                         setFormData((prev) => ({ ...prev, imageUrl: "" }))
                       }
@@ -346,8 +383,17 @@ export default function NewMenuItemPage() {
                 className="flex items-center gap-2"
                 disabled={submitting}
               >
-                <Save className="h-4 w-4" />
-                Save Item
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Save Item
+                  </>
+                )}
               </Button>
             </div>
           </form>
