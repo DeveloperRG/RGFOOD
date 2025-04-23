@@ -50,34 +50,34 @@ export default function MenuListingPage() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
-    async function fetchMenuItems() {
+    async function fetchData() {
+      setLoading(true);
       try {
-        const res = await fetch(`/api/foodcourt/${id}/menu`);
-if (res.ok) {
-  const { menuItems } = await res.json(); // ✅ Destructure correctly
-  setMenuItems(menuItems);
-
-  const uniqueCategories = Array.from(
-    new Set(
-      menuItems
-        .filter((item: { category: null; }) => item.category !== null)
-        .map((item: { category: any; }) => item.category),
-    ),
-  );
-  setCategories(uniqueCategories as Category[]);
-}
-
-        else {
-          toast.error("Failed to load menu items");
+        // Fetch menu items
+        const menuRes = await fetch(`/api/foodcourt/${id}/menu`);
+        if (!menuRes.ok) {
+          throw new Error("Failed to load menu items");
         }
+        const { menuItems } = await menuRes.json();
+        setMenuItems(menuItems);
+
+        // Fetch categories from the categories API
+        const categoriesRes = await fetch(`/api/categories`);
+        if (!categoriesRes.ok) {
+          throw new Error("Failed to load categories");
+        }
+        const { categories } = await categoriesRes.json();
+        setCategories(categories);
       } catch (err) {
-        toast.error("Something went wrong");
+        toast.error(
+          err instanceof Error ? err.message : "Something went wrong",
+        );
       } finally {
         setLoading(false);
       }
     }
 
-    if (id) fetchMenuItems();
+    if (id) fetchData();
   }, [id]);
 
   const filteredItems = menuItems.filter((item) => {

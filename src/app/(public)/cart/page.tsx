@@ -1,117 +1,173 @@
 // src/app/(public)/cart/page.tsx
+
 "use client";
 
-import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useState } from "react";
 
-// Dummy cart data
-const initialCartItems = [
-  {
-    id: "1",
-    name: "Spring Rolls",
-    price: 5.99,
-    quantity: 2,
-    foodcourt: "Asian Delights",
-    foodcourtId: "fc1",
-    imageUrl: "/api/placeholder/100/100",
-  },
-  {
-    id: "2",
-    name: "Beef Noodles",
-    price: 12.99,
-    quantity: 1,
-    foodcourt: "Asian Delights",
-    foodcourtId: "fc1",
-    imageUrl: "/api/placeholder/100/100",
-  },
-  {
-    id: "3",
-    name: "Cheeseburger",
-    price: 8.99,
-    quantity: 1,
-    foodcourt: "Burger Paradise",
-    foodcourtId: "fc2",
-    imageUrl: "/api/placeholder/100/100",
-  },
-];
+interface MenuItem {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  category: {
+    id: string;
+    name: string;
+  } | null;
+}
 
-export default function CartPage() {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+interface CartItem {
+  item: MenuItem;
+  quantity: number;
+}
+
+export default function CartPage({ params }: { params: { id: string } }) {
+  const tableId = params.id;
+  const router = useRouter();
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
-  const [tableId, setTableId] = useState("table1"); // In a real app, this would come from context/state
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [specialInstructions, setSpecialInstructions] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [orderSuccess, setOrderSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  // Calculate subtotal for an item
-  const getItemSubtotal = (price: number, quantity: number) => {
-    return price * quantity;
-  };
-
-  // Calculate total cart value
-  const getTotal = () => {
-    return cartItems.reduce(
-      (total, item) => total + getItemSubtotal(item.price, item.quantity),
-      0,
-    );
-  };
-
-  // Group items by foodcourt
-  const itemsByFoodcourt = cartItems.reduce(
-    (acc, item) => {
-      const foodcourtId = item.foodcourtId;
-      if (!acc[foodcourtId]) {
-        acc[foodcourtId] = {
-          name: item.foodcourt,
-          items: [],
-        };
+  // Load cart from localStorage
+  useEffect(() => {
+    const savedCart = localStorage.getItem(`cart-${tableId}`);
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch (e) {
+        console.error("Failed to load cart from localStorage");
       }
-      acc[foodcourtId].items.push(item);
-      return acc;
-    },
-    {} as Record<string, { name: string; items: typeof cartItems }>,
+    }
+    
+    // Load customer details if previously saved
+    const savedCustomer = localStorage.getItem(`customer-${tableId}`);
+    if (savedCustomer) {
+      try {
+        const customer = JSON.parse(savedCustomer);
+        setCustomerName(customer.name || "");
+        setCustomerPhone(customer.phone || "");
+      } catch (e) {
+        console.error("Failed to load customer details from localStorage");
+      }
+    }
+  }, [tableId]);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(`cart-${tableId}`, JSON.stringify(cart));
+    
+    // If cart is empty after an order is placed successfully, redirect back to foodcourts list
+    if (cart.length === 0 && success) {
+      setTimeout(() => {
+        router.push(`/table/${tableId}`);
+      }, 3000);
+    }
+  }, [cart, tableId, success, router]);
+
+  // Calculate total price
+  const totalPrice = cart.reduce(
+    (total, item) => total + Number(item.item.price) * item.quantity,
+    0
   );
 
   // Update item quantity
-  const updateQuantity = (itemId: string, newQuantity: number) => {
+  const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-
-    setCartItems(
-      cartItems.map((item) =>
-        item.id === itemId ? { ...item, quantity: newQuantity } : item,
-      ),
+    
+    setCart((prevCart) =>
+      prevCart.map((cartItem) =>
+        cartItem.item.id === id
+          ? { ...cartItem, quantity: newQuantity }
+          : cartItem
+      )
     );
   };
 
   // Remove item from cart
-  const removeItem = (itemId: string) => {
-    setCartItems(cartItems.filter((item) => item.id !== itemId));
+  const removeItem = (id: string) => {
+    setCart((prevCart) => prevCart.filter((cartItem) => cartItem.item.id !== id));
   };
 
   // Handle order submission
-  const handleSubmitOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerName) return;
+  const placeOrder = async () => {
+    if (cart.length === 0) {
+      setError("Your cart is empty");
+      return;
+    }
 
-    setIsSubmitting(true);
+    if (!customerName) {
+      setError("Please enter your name");
+      return;
+    }
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      setIsSubmitting(true);
+      setError(null);
+
+      // Save customer details to localStorage
+      localStorage.setItem(
+        `customer-${tableId}`,
+        JSON.stringify({ name: customerName, phone: customerPhone })
+      );
+
+      // Prepare order data
+      const orderData = {
+        tableId,
+        customerName,
+        customerPhone,
+        specialInstructions,
+        items: cart.map((cartItem) => ({
+          menuItemId: cartItem.item.id,
+          quantity: cartItem.quantity,
+          specialInstructions: "",
+        })),
+      };
+
+      // Send order to API
+      const response = await fetch("/api/public/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to place order");
+      }
+
+      // Order placed successfully
+      setSuccess(true);
+      setCart([]); // Clear cart
+      localStorage.removeItem(`cart-${tableId}`);
+      
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
       setIsSubmitting(false);
-      setOrderSuccess(true);
-      // Clear cart
-      setCartItems([]);
-    }, 1500);
+    }
   };
 
-  if (orderSuccess) {
-    return (
-      <div className="container mx-auto max-w-4xl px-4 py-12">
-        <div className="rounded-lg bg-white p-8 text-center shadow-md">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="fixed top-0 right-0 left-0 z-10 bg-white p-4 shadow-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <button
+            className="rounded-full bg-gray-100 p-2"
+            onClick={() => router.back()}
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-10 w-10 text-green-600"
+              className="h-6 w-6"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -120,34 +176,37 @@ export default function CartPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M5 13l4 4L19 7"
+                d="M15 19l-7-7 7-7"
               />
             </svg>
-          </div>
-          <h1 className="mb-4 text-3xl font-bold text-gray-900">
-            Order Placed Successfully!
-          </h1>
-          <p className="mb-8 text-lg text-gray-600">
-            Thank you, {customerName}! Your order has been received and is being
-            processed. You'll receive a notification when it's ready.
-          </p>
-          <Link
-            href="/"
-            className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
-          >
-            Return Home
-          </Link>
+          </button>
+          <h1 className="text-xl font-bold">Your Cart</h1>
+          <div className="w-10"></div> {/* Empty div for balance */}
         </div>
-      </div>
-    );
-  }
+      </header>
 
-  if (cartItems.length === 0) {
-    return (
-      <div className="container mx-auto max-w-4xl px-4 py-12">
-        <div className="rounded-lg bg-white p-8 shadow-md">
-          <h1 className="mb-4 text-3xl font-bold text-gray-900">Your Cart</h1>
-          <div className="py-12 text-center">
+      <div className="mx-auto max-w-3xl px-4 pt-20 pb-32">
+        {/* Success Message */}
+        {success && (
+          <div className="mb-6 rounded-lg bg-green-100 p-4 text-green-700">
+            <p className="font-medium">Order placed successfully!</p>
+            <p className="mt-2 text-sm">
+              Thank you for your order. You will be redirected back to the menu...
+            </p>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 rounded-lg bg-red-100 p-4 text-red-700">
+            <p className="font-medium">Error</p>
+            <p className="mt-1">{error}</p>
+          </div>
+        )}
+
+        {/* Empty Cart Message */}
+        {cart.length === 0 && !success && (
+          <div className="mt-10 rounded-lg bg-white p-6 text-center shadow-sm">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="mx-auto mb-4 h-16 w-16 text-gray-400"
@@ -159,235 +218,214 @@ export default function CartPage() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
               />
             </svg>
-            <p className="mb-8 text-lg text-gray-600">Your cart is empty</p>
-            <Link
-              href={`/table/${tableId}`}
-              className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-medium text-white transition-colors hover:bg-blue-700"
+            <h2 className="mb-2 text-xl font-semibold">Your cart is empty</h2>
+            <p className="mb-4 text-gray-600">
+              Add items from the menu to get started with your order.
+            </p>
+            <button
+              onClick={() => router.push(`/table/${tableId}`)}
+              className="rounded-full bg-green-600 px-6 py-2 text-white"
             >
               Browse Menu
-            </Link>
+            </button>
           </div>
-        </div>
-      </div>
-    );
-  }
+        )}
 
-  return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-8 text-3xl font-bold text-gray-900">Your Cart</h1>
-
-      <div className="mb-8">
-        <Link
-          href={`/table/${tableId}`}
-          className="flex items-center text-blue-600 hover:text-blue-800"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="mr-2 h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-          Continue Ordering
-        </Link>
-      </div>
-
-      <div className="flex flex-col gap-8 lg:flex-row">
-        <div className="lg:w-2/3">
-          {Object.entries(itemsByFoodcourt).map(([foodcourtId, foodcourt]) => (
-            <div
-              key={foodcourtId}
-              className="mb-6 overflow-hidden rounded-lg bg-white shadow-md"
-            >
-              <div className="border-b bg-gray-50 px-6 py-4">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  {foodcourt.name}
-                </h2>
-              </div>
-
-              <div className="divide-y">
-                {foodcourt.items.map((item) => (
-                  <div key={item.id} className="flex items-center px-6 py-4">
-                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded">
+        {/* Cart Items */}
+        {cart.length > 0 && (
+          <>
+            <div className="mb-6 rounded-lg bg-white p-4 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold">Order Items</h2>
+              {cart.map((cartItem) => (
+                <div
+                  key={cartItem.item.id}
+                  className="mb-4 flex items-center border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
+                >
+                  <div className="relative mr-3 h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+                    {cartItem.item.imageUrl ? (
                       <Image
-                        src={item.imageUrl}
-                        alt={item.name}
+                        src={cartItem.item.imageUrl}
+                        alt={cartItem.item.name}
                         fill
                         className="object-cover"
                       />
-                    </div>
-                    <div className="ml-4 flex-grow">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {item.name}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        ${item.price.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="flex items-center">
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.id, item.quantity - 1)
-                        }
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                      <span className="mx-3">{item.quantity}</span>
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.id, item.quantity + 1)
-                        }
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="ml-6 text-right">
-                      <p className="text-lg font-semibold text-gray-900">
-                        ${getItemSubtotal(item.price, item.quantity).toFixed(2)}
-                      </p>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="text-sm text-red-600 hover:text-red-800"
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gray-200">
+                        <span className="text-lg font-bold text-gray-500">
+                          {cartItem.item.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="lg:w-1/3">
-          <div className="sticky top-6 rounded-lg bg-white p-6 shadow-md">
-            <h2 className="mb-4 text-xl font-semibold text-gray-800">
-              Order Summary
-            </h2>
-
-            <div className="mb-6">
-              {cartItems.map((item) => (
-                <div key={item.id} className="mb-2 flex justify-between">
-                  <span className="text-gray-600">
-                    {item.quantity} × {item.name}
-                  </span>
-                  <span className="font-medium text-gray-900">
-                    ${getItemSubtotal(item.price, item.quantity).toFixed(2)}
-                  </span>
+                  <div className="flex-1">
+                    <h3 className="font-medium">{cartItem.item.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      Rp. {Number(cartItem.item.price).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center">
+                    <button
+                      onClick={() =>
+                        updateQuantity(cartItem.item.id, cartItem.quantity - 1)
+                      }
+                      className="rounded-full bg-gray-100 p-2"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M20 12H4"
+                        />
+                      </svg>
+                    </button>
+                    <span className="mx-2 w-6 text-center">
+                      {cartItem.quantity}
+                    </span>
+                    <button
+                      onClick={() =>
+                        updateQuantity(cartItem.item.id, cartItem.quantity + 1)
+                      }
+                      className="rounded-full bg-gray-100 p-2"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => removeItem(cartItem.item.id)}
+                      className="ml-4 text-red-500"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               ))}
-
-              <div className="mt-4 border-t pt-4">
-                <div className="mb-2 flex justify-between">
-                  <span className="text-lg font-semibold text-gray-900">
-                    Total
-                  </span>
-                  <span className="text-lg font-bold text-blue-600">
-                    ${getTotal().toFixed(2)}
-                  </span>
-                </div>
-              </div>
             </div>
 
-            <form onSubmit={handleSubmitOrder}>
+            {/* Customer Information */}
+            <div className="mb-6 rounded-lg bg-white p-4 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold">Customer Information</h2>
               <div className="mb-4">
-                <label
-                  htmlFor="customerName"
-                  className="mb-1 block text-sm font-medium text-gray-700"
-                >
-                  Your Name
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Name *
                 </label>
                 <input
                   type="text"
-                  id="customerName"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2"
                   placeholder="Enter your name"
                   required
                 />
               </div>
+              <div className="mb-4">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                  placeholder="Enter your phone number"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Special Instructions
+                </label>
+                <textarea
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                  placeholder="Any special requests"
+                  rows={3}
+                ></textarea>
+              </div>
+            </div>
 
+            {/* Order Summary */}
+            <div className="mb-6 rounded-lg bg-white p-4 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold">Order Summary</h2>
+              <div className="mb-2 flex justify-between">
+                <span>Subtotal</span>
+                <span>Rp. {totalPrice.toLocaleString()}</span>
+              </div>
+              <div className="mb-2 flex justify-between text-gray-500">
+                <span>Tax (included)</span>
+                <span>Included</span>
+              </div>
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <div className="flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span>Rp. {totalPrice.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Fixed Bottom Order Button */}
+      {cart.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-lg">
+          <div className="mx-auto max-w-3xl">
+            <div className="flex justify-between">
+              <div>
+                <p className="text-lg font-semibold">
+                  Rp. {totalPrice.toLocaleString()}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {cart.reduce((total, item) => total + item.quantity, 0)} items
+                </p>
+              </div>
               <button
-                type="submit"
-                disabled={isSubmitting || !customerName}
-                className={`w-full rounded-lg px-6 py-3 font-medium transition-colors ${
-                  isSubmitting || !customerName
-                    ? "cursor-not-allowed bg-gray-300 text-gray-500"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
+                onClick={placeOrder}
+                disabled={isSubmitting}
+                className={`rounded-lg bg-green-600 px-6 py-3 font-medium text-white ${
+                  isSubmitting ? "opacity-70" : ""
                 }`}
               >
-                {isSubmitting ? (
-                  <span className="flex items-center justify-center">
-                    <svg
-                      className="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Processing...
-                  </span>
-                ) : (
-                  "Place Order"
-                )}
+                {isSubmitting ? "Processing..." : "Place Order"}
               </button>
-            </form>
-
-            <div className="mt-4 text-center text-sm text-gray-500">
-              <p>
-                By placing your order, you agree to the Terms of Service and
-                Privacy Policy.
-              </p>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
