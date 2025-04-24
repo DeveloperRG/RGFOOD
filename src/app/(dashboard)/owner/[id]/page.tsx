@@ -45,7 +45,7 @@ export default async function OwnerDashboardPage({
       role: "FOODCOURT_OWNER", // Use string literal instead of enum for Prisma
     },
     include: {
-      foodcourts: true,
+      ownedFoodcourts: true,
     },
   });
 
@@ -61,7 +61,7 @@ export default async function OwnerDashboardPage({
     username: ownerData.username,
     image: ownerData.image,
     role: UserRole.FOODCOURT_OWNER,
-    foodcourts: ownerData.foodcourts.map(
+    foodcourts: ownerData.ownedFoodcourts.map(
       (fc): Foodcourt => ({
         id: fc.id,
         name: fc.name,
@@ -71,13 +71,13 @@ export default async function OwnerDashboardPage({
         isActive: fc.isActive,
         createdAt: fc.createdAt,
         updatedAt: fc.updatedAt,
-        ownerId: fc.ownerId,
+        ownerId: fc.ownerId ?? undefined,
       }),
     ),
   };
 
   // Get the foodcourt
-  const foodcourt = ownerData.foodcourts[0];
+  const foodcourt = ownerData.ownedFoodcourts[0];
   const foodcourtId = foodcourt?.id;
 
   // Get order stats if a foodcourt exists

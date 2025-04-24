@@ -22,7 +22,7 @@ export async function GET(
     const user = await db.user.findUnique({
       where: { id: params.id },
       include: {
-        foodcourts: true,
+        ownedFoodcourts: true,
       },
     });
 
