@@ -54,6 +54,7 @@ export function AdminDashboard({
           description="Total registered food courts"
           icon={<Store className="h-5 w-5" />}
           trend={null}
+          href="/admin/foodcourts"
         />
         <DashboardMetricCard
           title="Food Court Owners"

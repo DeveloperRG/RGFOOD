@@ -1,7 +1,7 @@
-// ~/components/dashboard/admin/dashboard-metric-card.tsx
 import React from "react";
 import { Card, CardContent } from "~/components/ui/card";
 import { TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
 
 interface DashboardMetricCardProps {
   title: string;
@@ -12,6 +12,7 @@ interface DashboardMetricCardProps {
     value: number;
     isPositive: boolean;
   } | null;
+  href?: string;
 }
 
 export function DashboardMetricCard({
@@ -20,9 +21,10 @@ export function DashboardMetricCard({
   description,
   icon,
   trend,
+  href,
 }: DashboardMetricCardProps) {
-  return (
-    <Card>
+  const content = (
+    <Card className="cursor-pointer transition hover:shadow-md">
       <CardContent className="p-6">
         <div className="flex items-center justify-between space-x-4">
           <div className="flex flex-col space-y-1">
@@ -56,4 +58,6 @@ export function DashboardMetricCard({
       </CardContent>
     </Card>
   );
+
+  return href ? <Link href={href}>{content}</Link> : content;
 }
