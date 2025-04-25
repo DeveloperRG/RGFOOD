@@ -14,7 +14,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Card, CardContent } from "~/components/ui/card";
 
 export default function FoodcourtManagementPage() {
-  const { id } = useParams();
+  const { id: ownerId } = useParams();
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -28,7 +28,9 @@ export default function FoodcourtManagementPage() {
   useEffect(() => {
     async function fetchFoodcourt() {
       try {
-        const res = await fetch(`/api/foodcourt/${id}`);
+        const res = await fetch(`/api/foodcourt/${ownerId}`, {
+          credentials: "include", // ✅ include cookies for auth()
+        });
         if (res.ok) {
           const data = await res.json();
           setFormData({
@@ -48,17 +50,19 @@ export default function FoodcourtManagementPage() {
       }
     }
 
-    if (id) fetchFoodcourt();
-  }, [id]);
+    if (ownerId) fetchFoodcourt();
+  }, [ownerId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      const res = await fetch(`/api/foodcourt/${id}`, {
+      const res = await fetch(`/api/foodcourt/${ownerId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
+        credentials: "include", // ✅ include session cookies
       });
+
       if (res.ok) {
         toast.success("Foodcourt updated successfully");
         setEditMode(false);
@@ -107,11 +111,15 @@ export default function FoodcourtManagementPage() {
             </div>
             <div>
               <strong>Logo:</strong>{" "}
-              <img
-                src={formData.logo}
-                alt="Logo"
-                className="mt-2 h-16 rounded"
-              />
+              {formData.logo ? (
+                <img
+                  src={formData.logo}
+                  alt="Logo"
+                  className="mt-2 h-16 rounded"
+                />
+              ) : (
+                <span className="text-gray-500">No logo uploaded</span>
+              )}
             </div>
             <div>
               <strong>Status:</strong>{" "}

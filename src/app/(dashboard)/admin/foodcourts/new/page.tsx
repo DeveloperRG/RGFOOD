@@ -1,5 +1,7 @@
 // ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
 
+// ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
+
 import type { Metadata } from "next";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
@@ -42,10 +44,15 @@ export default async function NewFoodcourtPage() {
     redirect("/login");
   }
 
-  // Fetch all users with FOODCOURT_OWNER role for the owner selection dropdown
+  // Fetch all users with FOODCOURT_OWNER role who don't already have a foodcourt
   const potentialOwners = await db.user.findMany({
     where: {
       role: UserRole.FOODCOURT_OWNER,
+      // Find users who don't have any foodcourts where they are the owner
+      NOT: {
+        ownedFoodcourt: {
+        }
+      }
     },
     select: {
       id: true,
@@ -161,8 +168,13 @@ export default async function NewFoodcourtPage() {
                     </option>
                   ))}
                 </select>
+                {potentialOwners.length === 0 && (
+                  <p className="text-yellow-600 text-sm">
+                    No available owners found. All foodcourt owners already have a foodcourt assigned.
+                  </p>
+                )}
                 <p className="text-muted-foreground text-sm">
-                  Select a foodcourt owner from the list
+                  Select a foodcourt owner from the list of available owners
                 </p>
               </div>
 

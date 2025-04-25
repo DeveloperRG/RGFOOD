@@ -62,7 +62,7 @@ model User {
 
   accounts          Account[]
   sessions          Session[]
-  ownedFoodcourts   Foodcourt[]       @relation("FoodcourtOwner")
+  ownedFoodcourt    Foodcourt?       @relation("FoodcourtOwner") // Changed to optional single relation
   createdFoodcourts Foodcourt[]       @relation("FoodcourtCreator")
   permissions       OwnerPermission[]
   updatedLogs       OrderLog[]
@@ -80,18 +80,19 @@ model Foodcourt {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  ownerId String?
-  owner   User?   @relation("FoodcourtOwner", fields: [ownerId], references: [id])
+  ownerId   String?  // Can remain optional
+  owner     User?    @relation("FoodcourtOwner", fields: [ownerId], references: [id])
   creatorId String
-  creator   User   @relation("FoodcourtCreator", fields: [creatorId], references: [id])
+  creator   User     @relation("FoodcourtCreator", fields: [creatorId], references: [id])
 
-  foodcourtCategories     FoodcourtCategory[]
+  foodcourtCategories FoodcourtCategory[]
   menuItems          MenuItem[]
   orderItems         OrderItem[]
   ownerNotifications OwnerNotification[]
   ownerPermissions   OwnerPermission[]
 
   @@map("foodcourts")
+  @@unique([ownerId]) // This ensures each owner can only be associated with one foodcourt
 }
 
 model FoodcourtCategory {
