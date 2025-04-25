@@ -27,8 +27,7 @@ export default async function AdminDashboardPage() {
   const pendingRegistrations = await db.user.findMany({
     where: {
       role: UserRole.FOODCOURT_OWNER,
-      ownedFoodcourts: {
-        none: {},
+      ownedFoodcourt: {
       },
     },
     select: {

@@ -235,6 +235,9 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "foodcourts_ownerId_key" ON "foodcourts"("ownerId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "tables_tableNumber_key" ON "tables"("tableNumber");
 
 -- CreateIndex

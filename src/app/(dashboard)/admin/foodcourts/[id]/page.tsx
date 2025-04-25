@@ -1,4 +1,4 @@
-// ~/src/app/(dashboard)/admin/foodcourts/[foodcourtId]/page.tsx
+// ~/src/app/(dashboard)/admin/foodcourts/[id]/page.tsx
 
 import type { Metadata } from "next";
 import { db } from "~/server/db";

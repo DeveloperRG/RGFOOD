@@ -1,4 +1,4 @@
-// ~/src/app/(dashboard)/admin/foodcourts/[foodcourtsId]/edit/page.tsx
+// ~/src/app/(dashboard)/admin/foodcourts/[id]/edit/page.tsx
 
 import type { Metadata } from "next";
 import { Button } from "~/components/ui/button";

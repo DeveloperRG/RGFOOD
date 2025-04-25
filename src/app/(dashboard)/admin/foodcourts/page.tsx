@@ -5,7 +5,7 @@ import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { FoodcourtCardGrid } from "~/components/dashboard/admin/foodcourts/components/foodcourt-CardGrid";
+import { FoodcourtCardGrid } from "~/components/dashboard/admin/foodcourts/foodcourt-CardGrid";
 
 export default function FoodcourtsPage() {
   const [query, setQuery] = useState("");
