@@ -4,15 +4,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
   params: {
-    id: string;
+    foodcourtId: string;
   };
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { foodcourtId } = params;
 
-    if (!id) {
+    if (!foodcourtId) {
       return NextResponse.json(
         { error: "Foodcourt ID is required" },
         { status: 400 },
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const foodcourt = await db.foodcourt.findUnique({
       where: {
-        id,
+        id: foodcourtId,
         isActive: true, // Only return active foodcourts
       },
       select: {

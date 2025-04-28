@@ -1,18 +1,18 @@
-// app/api/public/tables/[id]/route.ts
+// app/api/public/tables/[tableId]/route.ts
 import { db } from "~/server/db";
 import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
   params: {
-    id: string;
+    tableId: string;
   };
 }
 
 export async function GET(req: Request, { params }: RouteParams) {
   try {
-    const { id } = params;
+    const { tableId } = params;
 
-    if (!id) {
+    if (!tableId) {
       return NextResponse.json(
         { error: "Table ID is required" },
         { status: 400 },
@@ -22,7 +22,7 @@ export async function GET(req: Request, { params }: RouteParams) {
     // Get table details
     const table = await db.table.findUnique({
       where: {
-        id,
+        id: tableId,
       },
       select: {
         id: true,
@@ -51,7 +51,7 @@ export async function GET(req: Request, { params }: RouteParams) {
     // Check if table has an active order
     const activeOrders = await db.order.findMany({
       where: {
-        tableId: id,
+        tableId: tableId,
         status: {
           in: ["PENDING", "PREPARING", "READY"],
         },

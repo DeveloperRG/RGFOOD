@@ -1,66 +1,178 @@
 // ~/src/app/(dashboard)/admin/foodcourts/[id]/page.tsx
 
-import type { Metadata } from "next";
-import { db } from "~/server/db";
-import { notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, Edit, UserPlus } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { toast } from "sonner";
+import { Skeleton } from "~/components/ui/skeleton";
 
-export const metadata: Metadata = {
-  title: "Foodcourt Details",
-  description: "View foodcourt details and manage owner",
-};
-
-interface FoodcourtDetailsPageProps {
-  params: {
-    foodcourtId: string; // Fixed parameter name to match the file path
-  };
+interface FoodcourtOwner {
+  id: string;
+  name: string | null;
+  email: string;
+  role?: string;
 }
 
-export default async function FoodcourtDetailsPage({
-  params,
-}: FoodcourtDetailsPageProps) {
-  const { foodcourtId } = params; // Use the correct parameter name
+interface FoodcourtCategory {
+  id: string;
+  name: string;
+}
 
-  // Fetch foodcourt with owner and creator data
-  const foodcourt = await db.foodcourt.findUnique({
-    where: { id: foodcourtId },
-    include: {
-      owner: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-      },
-      creator: {
-        // Add creator data
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-      },
-      foodcourtCategories: true,
-      menuItems: {
-        select: {
-          id: true,
-          name: true,
-          price: true,
-          isAvailable: true,
-        },
-      },
-      ownerPermissions: true,
-    },
-  });
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+}
+
+interface OwnerPermission {
+  id: string;
+  ownerId: string;
+  foodcourtId: string;
+  canEditMenu: boolean;
+  canViewOrders: boolean;
+  canUpdateOrders: boolean;
+}
+
+interface Foodcourt {
+  id: string;
+  name: string;
+  address: string;
+  description: string | null;
+  logo: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  ownerId: string | null;
+  creatorId: string;
+  owner: FoodcourtOwner | null;
+  creator: FoodcourtOwner | null;
+  foodcourtCategories: FoodcourtCategory[];
+  menuItems: MenuItem[];
+  ownerPermissions: OwnerPermission[];
+}
+
+export default function FoodcourtDetailsPage() {
+  const params = useParams();
+  const router = useRouter();
+
+  const [foodcourt, setFoodcourt] = useState<Foodcourt | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const foodcourtId = params.id as string;
+
+  useEffect(() => {
+    async function fetchFoodcourt() {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/admin/foodcourts/${foodcourtId}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            router.push("/admin/foodcourts");
+            return;
+          }
+          throw new Error("Failed to fetch foodcourt");
+        }
+
+        const data = await response.json();
+        setFoodcourt(data);
+      } catch (error) {
+        toast.error("Failed to load foodcourt details. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (foodcourtId) {
+      fetchFoodcourt();
+    }
+  }, [foodcourtId, router, toast]);
+
+  // Display loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="mb-6">
+          <Link href="/admin/foodcourts">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Foodcourts
+            </Button>
+          </Link>
+        </div>
+
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-start gap-4">
+            <Skeleton className="h-16 w-16 rounded-md" />
+            <div>
+              <Skeleton className="h-10 w-[300px]" />
+              <div className="mt-2">
+                <Skeleton className="h-6 w-[100px]" />
+              </div>
+            </div>
+          </div>
+          <div>
+            <Skeleton className="h-10 w-[150px]" />
+          </div>
+        </div>
+
+        <div className="grid gap-6">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader>
+                <Skeleton className="h-6 w-[200px]" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i}>
+                      <Skeleton className="mb-2 h-4 w-[100px]" />
+                      <Skeleton className="h-4 w-[200px]" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!foodcourt) {
-    notFound();
+    return (
+      <div className="container mx-auto py-8">
+        <div className="mb-6">
+          <Link href="/admin/foodcourts">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Foodcourts
+            </Button>
+          </Link>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-6">
+            <h2 className="text-xl font-semibold">Foodcourt not found</h2>
+            <p className="text-muted-foreground mt-2">
+              The requested foodcourt could not be found.
+            </p>
+            <Button
+              className="mt-4"
+              onClick={() => router.push("/admin/foodcourts")}
+            >
+              Return to Foodcourts
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Check if foodcourt has a real owner (not system user)
@@ -79,19 +191,47 @@ export default async function FoodcourtDetailsPage({
       </div>
 
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {foodcourt.name}
-          </h1>
-          <div className="mt-2 flex items-center gap-2">
-            <Badge variant={foodcourt.isActive ? "default" : "destructive"}>
-              {foodcourt.isActive ? "Active" : "Inactive"}
-            </Badge>
-            {hasRealOwner && (
-              <Badge variant="outline">
-                Owned by {foodcourt.owner?.name || foodcourt.owner?.email}
-              </Badge>
+        <div className="flex items-start gap-4">
+          <div className="bg-muted/20 h-16 w-16 overflow-hidden rounded-md border">
+            {foodcourt.logo ? (
+              <img
+                src={foodcourt.logo}
+                alt={`${foodcourt.name} logo`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8"></path>
+                  <rect x="8" y="8" width="8" height="8" rx="1"></rect>
+                </svg>
+              </div>
             )}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {foodcourt.name}
+            </h1>
+            <div className="mt-2 flex items-center gap-2">
+              <Badge variant={foodcourt.isActive ? "default" : "destructive"}>
+                {foodcourt.isActive ? "Active" : "Inactive"}
+              </Badge>
+              {hasRealOwner && (
+                <Badge variant="outline">
+                  Owned by {foodcourt.owner?.name || foodcourt.owner?.email}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -150,10 +290,43 @@ export default async function FoodcourtDetailsPage({
               </div>
               <div>
                 <dt className="text-muted-foreground text-sm font-medium">
+                  Logo
+                </dt>
+                <dd className="mt-1 text-sm">
+                  <div className="bg-muted/20 h-24 w-40 overflow-hidden rounded-md border">
+                    {foodcourt.logo ? (
+                      <img
+                        src={foodcourt.logo}
+                        alt="Foodcourt logo"
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="32"
+                          height="32"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M21 11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8"></path>
+                          <rect x="8" y="8" width="8" height="8" rx="1"></rect>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-sm font-medium">
                   Created At
                 </dt>
                 <dd className="mt-1 text-sm">
-                  {foodcourt.createdAt.toLocaleDateString()}
+                  {new Date(foodcourt.createdAt).toLocaleDateString()}
                 </dd>
               </div>
               <div>
@@ -161,7 +334,7 @@ export default async function FoodcourtDetailsPage({
                   Last Updated
                 </dt>
                 <dd className="mt-1 text-sm">
-                  {foodcourt.updatedAt.toLocaleDateString()}
+                  {new Date(foodcourt.updatedAt).toLocaleDateString()}
                 </dd>
               </div>
             </dl>
@@ -196,12 +369,14 @@ export default async function FoodcourtDetailsPage({
                   Created By
                 </dt>
                 <dd className="mt-1 text-sm">
-                  <div>
-                    <p>{foodcourt.creator.name || "Unnamed"}</p>
-                    <p className="text-muted-foreground">
-                      {foodcourt.creator.email}
-                    </p>
-                  </div>
+                  {foodcourt.creator && (
+                    <div>
+                      <p>{foodcourt.creator.name || "Unnamed"}</p>
+                      <p className="text-muted-foreground">
+                        {foodcourt.creator.email}
+                      </p>
+                    </div>
+                  )}
                 </dd>
               </div>
             </dl>
@@ -218,7 +393,7 @@ export default async function FoodcourtDetailsPage({
             </Link>
           </CardHeader>
           <CardContent>
-            {foodcourt.menuItems.length === 0 ? (
+            {!foodcourt.menuItems || foodcourt.menuItems.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 No menu items found
               </p>
@@ -282,7 +457,8 @@ export default async function FoodcourtDetailsPage({
             </Link>
           </CardHeader>
           <CardContent>
-            {foodcourt.foodcourtCategories.length === 0 ? (
+            {!foodcourt.foodcourtCategories ||
+            foodcourt.foodcourtCategories.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 No categories found
               </p>
