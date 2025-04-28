@@ -1,188 +1,314 @@
+// ~/components/dashboard/admin/foodcourts/foodcourt-CardGrid.tsx
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { MoreVertical } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Card, CardContent } from "~/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "~/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { Skeleton } from "~/components/ui/skeleton";
+import Link from "next/link";
+import { Edit, Trash } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
-type Foodcourt = {
+interface FoodcourtCardGridProps {
+  query: string;
+  onQueryChange: (query: string) => void;
+}
+
+interface Foodcourt {
   id: string;
   name: string;
   address: string;
+  description: string | null;
+  logo: string | null;
   isActive: boolean;
-  createdAt: Date;
-  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
   owner: {
     id: string;
     name: string | null;
-    email: string | null;
+    email: string;
   } | null;
-};
+  foodcourtCategories: Array<{
+    id: string;
+    name: string;
+  }>;
+}
 
-type Props = {
-  query: string;
-  onQueryChange: (value: string) => void;
-};
+interface PaginationData {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
-export function FoodcourtCardGrid({ query, onQueryChange }: Props) {
-  const [filteredFoodcourts, setFilteredFoodcourts] = useState<Foodcourt[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState<Foodcourt | null>(null);
+export function FoodcourtCardGrid({
+  query,
+  onQueryChange,
+}: FoodcourtCardGridProps) {
+  const [foodcourts, setFoodcourts] = useState<Foodcourt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationData>({
+    total: 0,
+    page: 1,
+    limit: 12,
+    totalPages: 0,
+  });
+  const router = useRouter();
 
-  const handleDelete = () => {
-    if (!selected) return;
-    toast.success(`Foodcourt "${selected.name}" telah dihapus.`);
-    setSelected(null);
-  };
-
-  const handleSearch = async (value: string) => {
+  // Fetch foodcourts with search and pagination
+  const fetchFoodcourts = async () => {
     setLoading(true);
-
     try {
-      const res = await fetch(
-        `/api/foodcourt/search?q=${encodeURIComponent(value)}`,
-      );
-      if (!res.ok) throw new Error("Failed to fetch data");
-      const data = await res.json();
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
 
-      if (data.length === 0) {
-        toast.info("Foodcourt tidak ada.");
+      if (query) {
+        params.append("search", query);
       }
 
-      setFilteredFoodcourts(data);
+      const response = await fetch(
+        `/api/admin/foodcourts?${params.toString()}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch foodcourts");
+      }
+
+      const data = await response.json();
+      setFoodcourts(data.foodcourts);
+      setPagination(data.pagination);
     } catch (error) {
-      toast.error("Gagal mengambil data.");
+      toast.error("Failed to load foodcourts. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle foodcourt deletion
+  const handleDelete = async (id: string) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this foodcourt? This action cannot be undone.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/foodcourts/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete foodcourt");
+      }
+
+      toast.success("Foodcourt deleted successfully.");
+
+      // Refresh the list
+      fetchFoodcourts();
+    } catch (error) {
+      toast.error("Failed to delete foodcourt. Please try again.");
+    }
+  };
+
+  // Pagination handlers
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({
+      ...prev,
+      page: newPage,
+    }));
+  };
+
+  // Load foodcourts on initial render and when query or pagination changes
   useEffect(() => {
-    handleSearch(query);
-  }, [query]);
+    fetchFoodcourts();
+  }, [query, pagination.page, pagination.limit]);
+
+  // UI for loading state
+  if (loading && foodcourts.length === 0) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={index} className="overflow-hidden">
+            <CardHeader className="p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-16 w-16 flex-shrink-0 rounded-md" />
+                <Skeleton className="h-6 w-3/4" />
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </CardContent>
+            <CardFooter className="p-4">
+              <Skeleton className="h-9 w-full" />
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // UI for no results
+  if (foodcourts.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed p-8 text-center">
+        <h3 className="text-lg font-medium">No foodcourts found</h3>
+        <p className="text-muted-foreground mt-2">
+          {query ? "Try a different search term or" : "Start by"} creating a new
+          foodcourt.
+        </p>
+        <div className="mt-4">
+          <Link href="/admin/foodcourts/new">
+            <Button>Create New Foodcourt</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-        {filteredFoodcourts.map((fc) => {
-          const cardContent = (
-            <Card className="cursor-pointer overflow-hidden transition hover:shadow-md">
-              {fc.imageUrl ? (
-                <Image
-                  src={fc.imageUrl}
-                  alt={fc.name}
-                  width={400}
-                  height={200}
-                  className="h-40 w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-gray-400">
-                  No Image
-                </div>
-              )}
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="text-muted-foreground w-full space-y-2 text-sm">
-                    <h3 className="text-lg font-semibold text-black">
-                      {fc.name}
-                    </h3>
-                    <div className="grid grid-cols-[52px_1fr] gap-x-2 text-sm text-gray-700">
-                      <div className="font-semibold">Address</div>
-                      <div className="truncate">: {fc.address}</div>
-
-                      <div className="font-semibold">Owner</div>
-                      <div>: {fc.owner?.name ?? "Not assigned"}</div>
-
-                      <div className="font-semibold">Status</div>
-                      <div className="flex items-center gap-1">
-                        :{" "}
-                        <Badge
-                          className={
-                            fc.isActive ? "bg-green-100 text-green-600" : ""
-                          }
-                          variant={fc.isActive ? "default" : "destructive"}
-                        >
-                          {fc.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    </div>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {foodcourts.map((foodcourt) => (
+          <Card key={foodcourt.id} className="overflow-hidden">
+            <CardHeader className="p-4">
+              <CardTitle className="flex items-center justify-between">
+                <Link
+                  href={`/admin/foodcourts/${foodcourt.id}`}
+                  className="hover:underline"
+                >
+                  {foodcourt.name}
+                </Link>
+                <Badge variant={foodcourt.isActive ? "default" : "secondary"}>
+                  {foodcourt.isActive ? "Active" : "Inactive"}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <p className="text-sm">{foodcourt.address}</p>
+                <p className="text-muted-foreground line-clamp-2 text-sm">
+                  {foodcourt.description || "No description provided"}
+                </p>
+                {foodcourt.owner && (
+                  <div className="text-sm">
+                    <p className="text-muted-foreground">
+                      Owner: {foodcourt.owner.name || foodcourt.owner.email}
+                    </p>
                   </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded-full p-2 hover:bg-gray-100"
-                      >
-                        <MoreVertical className="h-5 w-5 text-gray-600" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/foodcourts/${fc.id}`}>Edit</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelected(fc);
-                        }}
-                        className="text-destructive"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          );
-
-          return (
-            <Link key={fc.id} href={`/admin/foodcourts/${fc.id}`}>
-              {cardContent}
-            </Link>
-          );
-        })}
+                )}
+                {foodcourt.foodcourtCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-2">
+                    {foodcourt.foodcourtCategories
+                      .slice(0, 3)
+                      .map((category) => (
+                        <Badge
+                          key={category.id}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {category.name}
+                        </Badge>
+                      ))}
+                    {foodcourt.foodcourtCategories.length > 3 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{foodcourt.foodcourtCategories.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between gap-2 p-4">
+              <Link
+                href={`/admin/foodcourts/${foodcourt.id}`}
+                className="flex-1"
+              >
+                <Button variant="outline" className="w-full">
+                  View
+                </Button>
+              </Link>
+              <Link
+                href={`/admin/foodcourts/${foodcourt.id}/edit`}
+                className="flex-shrink-0"
+              >
+                <Button variant="outline" size="icon">
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Button
+                variant="outline"
+                size="icon"
+                className="flex-shrink-0"
+                onClick={() => handleDelete(foodcourt.id)}
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
       </div>
 
-      {/* Dialog Konfirmasi Hapus */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Yakin ingin menghapus{" "}
-              <span className="font-bold">{selected?.name}</span>?
-            </DialogTitle>
-          </DialogHeader>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setSelected(null)}>
-              Batal
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Hapus
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center gap-1 pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={pagination.page === 1}
+          >
+            Previous
+          </Button>
+
+          {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+            .filter(
+              (p) =>
+                p === 1 ||
+                p === pagination.totalPages ||
+                (p >= pagination.page - 1 && p <= pagination.page + 1),
+            )
+            .map((p, i, arr) => (
+              <React.Fragment key={p}>
+                {i > 0 && arr[i - 1] !== p - 1 && (
+                  <Button variant="outline" size="sm" disabled>
+                    ...
+                  </Button>
+                )}
+                <Button
+                  variant={pagination.page === p ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(p)}
+                >
+                  {p}
+                </Button>
+              </React.Fragment>
+            ))}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={pagination.page === pagination.totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,19 +1,40 @@
-// src/app/(public)/page.tsx
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowRightIcon,
-} from "@radix-ui/react-icons";
-import { UtensilsIcon, QrCodeIcon, TruckIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRightIcon } from "@radix-ui/react-icons";
+import { UtensilsIcon, QrCodeIcon, TruckIcon, Loader2 } from "lucide-react";
 
-const dummyTables = [
-  { id: "1", tableNumber: 1, status: "Available" },
-  { id: "2", tableNumber: 2, status: "Available" },
-  { id: "3", tableNumber: 3, status: "Available" },
-  { id: "4", tableNumber: 4, status: "Reserved" },
-  { id: "5", tableNumber: 5, status: "Available" },
-  { id: "6", tableNumber: 6, status: "Available" },
-];
+interface Table {
+  id: string;
+  tableNumber: string;
+  capacity: number;
+  qrCode: string | null;
+  isAvailable: boolean;
+  activeSession: {
+    id: string;
+    sessionStart: string;
+  } | null;
+  hasActiveOrder: boolean;
+  activeOrders:
+    | {
+        id: string;
+        status: string;
+        createdAt: string;
+      }[]
+    | null;
+}
+
+interface TablesResponse {
+  tables: Table[];
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
+}
 
 const popularFoodcourts = [
   { id: "1", name: "Asian Delights", cuisine: "Pan-Asian", rating: 4.7 },
@@ -22,6 +43,41 @@ const popularFoodcourts = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
+  const [tables, setTables] = useState<Table[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch all tables from the API
+  useEffect(() => {
+    const fetchTables = async () => {
+      try {
+        setLoading(true);
+
+        const response = await fetch("/api/public/tables");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch tables");
+        }
+
+        const data: TablesResponse = await response.json();
+        setTables(data.tables);
+      } catch (err) {
+        console.error("Error fetching tables:", err);
+        setError("Failed to load tables");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTables();
+  }, []);
+
+  // Function to handle table selection and redirect
+  const handleTableSelection = (tableId: string) => {
+    router.push(`/table/${tableId}`);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -39,10 +95,10 @@ export default function HomePage() {
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
-                  href="/explore"
+                  href="#table-selection"
                   className="inline-flex items-center rounded-full bg-white px-6 py-3 font-medium text-blue-700 shadow-lg transition-all hover:bg-yellow-300"
                 >
-                  Explore Menus
+                  Select a Table
                   <ArrowRightIcon className="ml-2 h-5 w-5" />
                 </Link>
                 <Link
@@ -205,7 +261,7 @@ export default function HomePage() {
       </div>
 
       {/* Table Selection Section */}
-      <div className="container mx-auto px-4 py-16">
+      <div id="table-selection" className="container mx-auto px-4 py-16">
         <div className="mb-10 text-center">
           <span className="inline-block rounded-full bg-blue-100 px-4 py-1 text-sm font-medium text-blue-800">
             Test Mode
@@ -214,42 +270,126 @@ export default function HomePage() {
             Select a Table
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-gray-600">
-            For testing purposes, select one of our virtual tables below
+            For testing purposes, select one of our tables below to simulate
+            scanning a QR code
           </p>
         </div>
 
         <div className="mx-auto max-w-4xl">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {dummyTables.map((table) => (
-              <Link
-                href={`/table/${table.id}`}
-                key={table.id}
-                className={`flex flex-col items-center rounded-xl p-6 text-center transition-all hover:scale-105 ${
-                  table.status === "Available"
-                    ? "bg-white shadow-md hover:shadow-xl"
-                    : "bg-gray-100 opacity-70"
-                }`}
-                aria-disabled={table.status !== "Available"}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="text-center">
+                <Loader2 className="mx-auto h-10 w-10 animate-spin text-blue-600" />
+                <p className="mt-4 text-gray-600">
+                  Loading available tables...
+                </p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="rounded-lg bg-red-50 p-6 text-center">
+              <p className="text-red-600">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 rounded-full bg-red-100 px-6 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
               >
-                <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-                  <span className="text-2xl font-bold text-blue-600">
-                    {table.tableNumber}
-                  </span>
-                </div>
-                <span className="mt-2 font-medium">
-                  Table {table.tableNumber}
-                </span>
-                <span
-                  className={`mt-1 text-xs ${
-                    table.status === "Available"
-                      ? "text-green-600"
-                      : "text-gray-500"
+                Try Again
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {tables.map((table) => (
+                <button
+                  key={table.id}
+                  onClick={() => handleTableSelection(table.id)}
+                  disabled={!table.isAvailable}
+                  className={`flex flex-col items-center rounded-xl p-6 text-center transition-all hover:scale-105 ${
+                    table.isAvailable
+                      ? "bg-white shadow-md hover:shadow-xl"
+                      : "cursor-not-allowed bg-gray-100 opacity-70"
                   }`}
                 >
-                  {table.status}
-                </span>
-              </Link>
-            ))}
+                  <div
+                    className={`mb-3 flex h-16 w-16 items-center justify-center rounded-full ${
+                      table.hasActiveOrder ? "bg-yellow-50" : "bg-blue-50"
+                    }`}
+                  >
+                    <span
+                      className={`text-2xl font-bold ${
+                        table.hasActiveOrder
+                          ? "text-yellow-600"
+                          : "text-blue-600"
+                      }`}
+                    >
+                      {table.tableNumber}
+                    </span>
+                  </div>
+                  <span className="mt-2 font-medium">
+                    Table {table.tableNumber}
+                  </span>
+                  <div className="mt-2 text-sm text-gray-500">
+                    Capacity: {table.capacity} persons
+                  </div>
+                  <span
+                    className={`mt-1 text-xs ${
+                      table.isAvailable
+                        ? table.hasActiveOrder
+                          ? "text-yellow-600"
+                          : "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {table.isAvailable
+                      ? table.hasActiveOrder
+                        ? "Active Order"
+                        : "Available"
+                      : "Not Available"}
+                  </span>
+                  {table.activeSession && (
+                    <span className="mt-1 text-xs text-blue-500">
+                      Session Active
+                    </span>
+                  )}
+                </button>
+              ))}
+
+              {/* Add a fallback when no tables are available */}
+              {tables.length === 0 && !error && !loading && (
+                <div className="col-span-full py-8 text-center">
+                  <p className="text-gray-500">
+                    No tables are currently available.
+                  </p>
+                  <p className="mt-2 text-sm text-gray-500">
+                    Make sure you've added tables to your database or try
+                    refreshing the page.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* QR Code explanation for testing */}
+        <div className="mx-auto mt-12 max-w-4xl rounded-lg bg-blue-50 p-6">
+          <div className="flex items-start space-x-4">
+            <div className="rounded-full bg-blue-100 p-3">
+              <QrCodeIcon className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-blue-900">
+                Testing Information
+              </h3>
+              <p className="mt-2 text-blue-800">
+                In a real implementation, customers would scan a QR code located
+                on their table which would automatically direct them to
+                <code className="mx-1 rounded bg-blue-100 px-1 py-0.5 text-sm">
+                  yourdomain.com/table/[tableId]
+                </code>
+              </p>
+              <p className="mt-2 text-blue-800">
+                This page simulates that process by letting you click on a table
+                instead of scanning a QR code.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -265,10 +405,10 @@ export default function HomePage() {
             with FoodCourt Hub
           </p>
           <Link
-            href="/register"
+            href="#table-selection"
             className="inline-flex items-center rounded-full bg-white px-8 py-3 font-medium text-blue-700 shadow-lg transition-all hover:bg-yellow-300"
           >
-            Get Started Now
+            Select a Table Now
             <ArrowRightIcon className="ml-2 h-5 w-5" />
           </Link>
         </div>

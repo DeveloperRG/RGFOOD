@@ -1,3 +1,5 @@
+// ~/src/app/api/admin/foodcourts/[foodcourtId]/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
@@ -6,7 +8,7 @@ import { UserRole, Prisma } from "@prisma/client";
 // GET: Fetch a specific foodcourt by ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { foodcourtId: string } }, // Changed from 'id' to 'foodcourtId'
 ) {
   try {
     const session = await auth();
@@ -19,11 +21,11 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { foodcourtId } = params; // Use foodcourtId instead of id
 
     // Fetch the foodcourt with owner information
     const foodcourt = await db.foodcourt.findUnique({
-      where: { id },
+      where: { id: foodcourtId }, // Correctly use the foodcourtId variable
       include: {
         owner: {
           select: {
@@ -32,9 +34,25 @@ export async function GET(
             email: true,
           },
         },
+        creator: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         ownerPermissions: true,
         foodcourtCategories: true,
+        menuItems: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            isAvailable: true,
+          },
+        },
       },
+      // Logo is included by default as it's a field on the foodcourt model itself
     });
 
     if (!foodcourt) {
@@ -57,7 +75,7 @@ export async function GET(
 // PUT: Update a foodcourt
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { foodcourtId: string } }, // Changed from 'id' to 'foodcourtId'
 ) {
   try {
     const session = await auth();
@@ -70,13 +88,13 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { foodcourtId } = params; // Use foodcourtId instead of id
     const body = await req.json();
     const { name, description, address, logo, isActive, ownerId } = body;
 
     // Check if foodcourt exists
     const existingFoodcourt = await db.foodcourt.findUnique({
-      where: { id },
+      where: { id: foodcourtId }, // Correctly use the foodcourtId variable
       include: { ownerPermissions: true },
     });
 
@@ -127,7 +145,7 @@ export async function PUT(
 
     // Update foodcourt
     const updatedFoodcourt = await db.foodcourt.update({
-      where: { id },
+      where: { id: foodcourtId }, // Correctly use the foodcourtId variable
       data: updateData,
     });
 
@@ -138,7 +156,7 @@ export async function PUT(
         await db.ownerPermission.deleteMany({
           where: {
             ownerId: previousOwnerId,
-            foodcourtId: id,
+            foodcourtId: foodcourtId, // Correctly use the foodcourtId variable
           },
         });
       }
@@ -150,7 +168,7 @@ export async function PUT(
           where: {
             ownerId_foodcourtId: {
               ownerId: updatedFoodcourt.ownerId,
-              foodcourtId: id,
+              foodcourtId: foodcourtId, // Correctly use the foodcourtId variable
             },
           },
         });
@@ -160,7 +178,7 @@ export async function PUT(
           await db.ownerPermission.create({
             data: {
               ownerId: updatedFoodcourt.ownerId,
-              foodcourtId: id,
+              foodcourtId: foodcourtId, // Correctly use the foodcourtId variable
               canEditMenu: true,
               canViewOrders: true,
               canUpdateOrders: true,
@@ -186,7 +204,7 @@ export async function PUT(
 // DELETE: Delete a foodcourt
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { foodcourtId: string } }, // Changed from 'id' to 'foodcourtId'
 ) {
   try {
     const session = await auth();
@@ -199,11 +217,11 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { foodcourtId } = params; // Use foodcourtId instead of id
 
     // Check if foodcourt exists
     const foodcourt = await db.foodcourt.findUnique({
-      where: { id },
+      where: { id: foodcourtId }, // Correctly use the foodcourtId variable
     });
 
     if (!foodcourt) {
@@ -217,22 +235,22 @@ export async function DELETE(
     await db.$transaction(async (tx) => {
       // Delete owner permissions for this foodcourt
       await tx.ownerPermission.deleteMany({
-        where: { foodcourtId: id },
+        where: { foodcourtId: foodcourtId }, // Correctly use the foodcourtId variable
       });
 
       // Delete owner notifications for this foodcourt
       await tx.ownerNotification.deleteMany({
-        where: { foodcourtId: id },
+        where: { foodcourtId: foodcourtId }, // Correctly use the foodcourtId variable
       });
 
       // Delete foodcourt categories
       await tx.foodcourtCategory.deleteMany({
-        where: { foodcourtId: id },
+        where: { foodcourtId: foodcourtId }, // Correctly use the foodcourtId variable
       });
 
       // Find all order items for this foodcourt
       const orderItems = await tx.orderItem.findMany({
-        where: { foodcourtId: id },
+        where: { foodcourtId: foodcourtId }, // Correctly use the foodcourtId variable
         select: { id: true, orderId: true },
       });
 
@@ -246,17 +264,17 @@ export async function DELETE(
 
       // Delete order items for this foodcourt
       await tx.orderItem.deleteMany({
-        where: { foodcourtId: id },
+        where: { foodcourtId: foodcourtId }, // Correctly use the foodcourtId variable
       });
 
       // Delete menu items for this foodcourt
       await tx.menuItem.deleteMany({
-        where: { foodcourtId: id },
+        where: { foodcourtId: foodcourtId }, // Correctly use the foodcourtId variable
       });
 
       // Delete the foodcourt itself
       await tx.foodcourt.delete({
-        where: { id },
+        where: { id: foodcourtId }, // Correctly use the foodcourtId variable
       });
 
       // Clean up any orphaned orders (orders without items)

@@ -1,3 +1,5 @@
+// ~/src/app/(dashboard)/admin/foodcourts/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -7,6 +9,8 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { FoodcourtCardGrid } from "~/components/dashboard/admin/foodcourts/foodcourt-CardGrid";
 
+// This is a client component, so metadata needs to be exported from a separate file
+// or use a layout.tsx file to add metadata
 export default function FoodcourtsPage() {
   const [query, setQuery] = useState("");
 
