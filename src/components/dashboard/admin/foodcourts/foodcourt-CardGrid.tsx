@@ -54,19 +54,19 @@ export function FoodcourtCardGrid({ query, onQueryChange }: Props) {
 
   const handleSearch = async (value: string) => {
     setLoading(true);
-
     try {
       const res = await fetch(
         `/api/foodcourt/search?q=${encodeURIComponent(value)}`,
       );
       if (!res.ok) throw new Error("Failed to fetch data");
+
       const data = await res.json();
-
-      if (data.length === 0) {
-        toast.info("Foodcourt tidak ada.");
-      }
-
       setFilteredFoodcourts(data);
+
+      // Jika hasil pencarian kosong, tampilkan toast
+      if (data.length === 0) {
+        toast.error("Foodcourt tidak ditemukan.");
+      }
     } catch (error) {
       toast.error("Gagal mengambil data.");
     } finally {
@@ -80,91 +80,98 @@ export function FoodcourtCardGrid({ query, onQueryChange }: Props) {
 
   return (
     <>
-      {/* Grid */}
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-        {filteredFoodcourts.map((fc) => {
-          const cardContent = (
-            <Card className="cursor-pointer overflow-hidden transition hover:shadow-md">
-              {fc.imageUrl ? (
-                <Image
-                  src={fc.imageUrl}
-                  alt={fc.name}
-                  width={400}
-                  height={200}
-                  className="h-40 w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-gray-400">
-                  No Image
-                </div>
-              )}
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="text-muted-foreground w-full space-y-2 text-sm">
-                    <h3 className="text-lg font-semibold text-black">
-                      {fc.name}
-                    </h3>
-                    <div className="grid grid-cols-[52px_1fr] gap-x-2 text-sm text-gray-700">
-                      <div className="font-semibold">Address</div>
-                      <div className="truncate">: {fc.address}</div>
+        {loading ? (
+          <Card className="animate-pulse overflow-hidden">
+            <div className="h-40 w-full bg-gray-200" />
+            <CardContent className="space-y-2 p-4">
+              <div className="h-4 w-1/2 rounded bg-gray-200" />
+              <div className="h-3 w-3/4 rounded bg-gray-200" />
+              <div className="h-3 w-2/3 rounded bg-gray-200" />
+              <div className="h-3 w-1/3 rounded bg-gray-200" />
+            </CardContent>
+          </Card>
+        ) : (
+          filteredFoodcourts.map((fc) => (
+            <Link key={fc.id} href={`/admin/foodcourts/${fc.id}`}>
+              <Card className="cursor-pointer overflow-hidden transition hover:shadow-md">
+                {fc.imageUrl ? (
+                  <Image
+                    src={fc.imageUrl}
+                    alt={fc.name}
+                    width={400}
+                    height={200}
+                    className="h-40 w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-40 w-full items-center justify-center bg-gray-100 text-gray-400">
+                    No Image
+                  </div>
+                )}
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="text-muted-foreground w-full space-y-2 text-sm">
+                      <h3 className="text-lg font-semibold text-black">
+                        {fc.name}
+                      </h3>
+                      <div className="grid grid-cols-[52px_1fr] gap-x-2">
+                        <div className="font-semibold">Address</div>
+                        <div className="truncate">: {fc.address}</div>
 
-                      <div className="font-semibold">Owner</div>
-                      <div>: {fc.owner?.name ?? "Not assigned"}</div>
+                        <div className="font-semibold">Owner</div>
+                        <div>: {fc.owner?.name ?? "Not assigned"}</div>
 
-                      <div className="font-semibold">Status</div>
-                      <div className="flex items-center gap-1">
-                        :{" "}
-                        <Badge
-                          className={
-                            fc.isActive ? "bg-green-100 text-green-600" : ""
-                          }
-                          variant={fc.isActive ? "default" : "destructive"}
-                        >
-                          {fc.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                        <div className="font-semibold">Status</div>
+                        <div className="flex items-center gap-1">
+                          :{" "}
+                          <Badge
+                            className={
+                              fc.isActive
+                                ? "bg-green-100 text-green-600"
+                                : "bg-red-100 text-red-600"
+                            }
+                            variant="default"
+                          >
+                            {fc.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded-full p-2 hover:bg-gray-100"
+                        >
+                          <MoreVertical className="h-5 w-5 text-gray-600" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/foodcourts/${fc.id}`}>Edit</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelected(fc);
+                          }}
+                          className="text-destructive"
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded-full p-2 hover:bg-gray-100"
-                      >
-                        <MoreVertical className="h-5 w-5 text-gray-600" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/foodcourts/${fc.id}`}>Edit</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelected(fc);
-                        }}
-                        className="text-destructive"
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          );
-
-          return (
-            <Link key={fc.id} href={`/admin/foodcourts/${fc.id}`}>
-              {cardContent}
+                </CardContent>
+              </Card>
             </Link>
-          );
-        })}
+          ))
+        )}
       </div>
 
-      {/* Dialog Konfirmasi Hapus */}
+      {/* Dialog konfirmasi delete */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
         <DialogContent>
           <DialogHeader>
