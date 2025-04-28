@@ -1,3 +1,5 @@
+// ~/src/app/api/admin/foodcourts/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";

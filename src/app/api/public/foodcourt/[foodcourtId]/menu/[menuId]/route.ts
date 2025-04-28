@@ -4,16 +4,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 interface RouteParams {
   params: {
-    id: string;
+    foodcourtId: string;
     menuId: string;
   };
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id, menuId } = params;
+    const { foodcourtId, menuId } = params;
 
-    if (!id || !menuId) {
+    if (!foodcourtId || !menuId) {
       return NextResponse.json(
         { error: "Foodcourt ID and Menu Item ID are required" },
         { status: 400 },
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // First check if foodcourt exists and is active
     const foodcourt = await db.foodcourt.findUnique({
       where: {
-        id,
+        id: foodcourtId,
         isActive: true,
       },
       select: { id: true },
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const menuItem = await db.menuItem.findUnique({
       where: {
         id: menuId,
-        foodcourtId: id,
+        foodcourtId: foodcourtId,
         isAvailable: true,
       },
       select: {
@@ -50,6 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         price: true,
         imageUrl: true,
         isAvailable: true,
+        categoryId: true,
         category: {
           select: {
             id: true,

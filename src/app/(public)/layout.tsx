@@ -1,6 +1,5 @@
 // src/app/(public)/layout.tsx
 import { Suspense } from "react";
-import PublicNavbar from "~/components/layout/public-navbar";
 
 export default function PublicLayout({
   children,
@@ -9,7 +8,6 @@ export default function PublicLayout({
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <PublicNavbar />
 
       <main>
         <Suspense
