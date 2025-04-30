@@ -240,11 +240,13 @@ export default function TablePage() {
           <span className="text-lg font-medium">
             Table #{tableInfo?.tableNumber || tableId}
           </span>
+
           {tableInfo?.hasActiveOrder && (
             <span className="mt-1 rounded-full bg-green-200 px-2 py-0.5 text-sm text-green-800">
               Order in progress
             </span>
           )}
+
           {tableInfo?.activeSession && (
             <span className="mt-1 text-xs">
               Session started:{" "}
@@ -254,7 +256,9 @@ export default function TablePage() {
             </span>
           )}
         </div>
+
         <p className="text-bold mt-1">Pesanan Kamu Akan Dikirim ke Sini</p>
+
       </div>
       {/* Search - Diletakkan setelah banner */}
       <div className="relative z-10 mx-auto -mt-10 max-w-2xl p-5">
@@ -264,8 +268,9 @@ export default function TablePage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-gray-200 pl-10 shadow-lg"
+
           />
-          <Search className="absolute top-2.5 left-3 h-5 w-5 text-gray-400" />
+          <Search className="absolute top-2 right-20 left-3 h-5 w-5 text-gray-400" />
           {searchQuery && (
             <Button
               variant="ghost"
@@ -278,7 +283,9 @@ export default function TablePage() {
           )}
         </div>
       </div>
+
       {/* Foodcourt List */}
+
       <div className="mx-auto max-w-4xl space-y-4 px-4">
         {filteredFoodcourts.length > 0 ? (
           filteredFoodcourts.map((foodcourt) => (
