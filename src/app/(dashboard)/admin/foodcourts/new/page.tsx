@@ -97,7 +97,7 @@ export default async function NewFoodcourtPage() {
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-0">
       <div className="mb-6">
         <Link href="/admin/foodcourts">
           <Button variant="outline" size="sm">
@@ -107,7 +107,7 @@ export default async function NewFoodcourtPage() {
         </Link>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-">
         <h1 className="text-3xl font-bold tracking-tight">Add New Foodcourt</h1>
         <p className="text-muted-foreground">
           Create a new foodcourt in the system

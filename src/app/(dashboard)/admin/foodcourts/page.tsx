@@ -1,17 +1,45 @@
 // ~/src/app/(dashboard)/admin/foodcourts/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { FoodcourtCardGrid } from "~/components/dashboard/admin/foodcourts/foodcourt-CardGrid";
+import "~/styles/globals.css";
 
-// This is a client component, so metadata needs to be exported from a separate file
-// or use a layout.tsx file to add metadata
+
+
+const STATUS_FILTER = {
+  ALL: "all",
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+} as const;
+
 export default function FoodcourtsPage() {
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<(typeof STATUS_FILTER)[keyof typeof STATUS_FILTER]>("all");
+  const [filteredCount, setFilteredCount] = useState(0);
+
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = {
+    all: useRef<HTMLButtonElement>(null),
+    active: useRef<HTMLButtonElement>(null),
+    inactive: useRef<HTMLButtonElement>(null),
+  };
+
+  useEffect(() => {
+    const currentButton = buttonRefs[statusFilter]?.current;
+    const indicator = indicatorRef.current;
+
+    if (currentButton && indicator) {
+      const { offsetLeft, offsetWidth } = currentButton;
+      indicator.style.transform = `translateX(${offsetLeft}px)`;
+      indicator.style.width = `${offsetWidth}px`;
+    }
+  }, [statusFilter]);
 
   return (
     <div className="container mx-auto py-6">
@@ -41,7 +69,48 @@ export default function FoodcourtsPage() {
         </Link>
       </div>
 
-      <FoodcourtCardGrid query={query} onQueryChange={setQuery} />
+      {/* Status Filter Tabs + Counter */}
+      <div className="mb-4 flex items-center gap-4">
+        <div className="relative flex w-fit items-center gap-1 rounded-lg bg-blue-50 p-0.5">
+          <div
+            ref={indicatorRef}
+            className="absolute top-1 bottom-1 left-0 rounded-md bg-blue-500 transition-all duration-300 ease-in-out"
+            style={{ zIndex: 0 }}
+          />
+
+          {Object.entries(STATUS_FILTER).map(([key, value]) => (
+            <button
+              key={value}
+              ref={buttonRefs[value]}
+              onClick={() => setStatusFilter(value)}
+              className={`relative z-10 rounded-md px-4 py-2 text-sm font-medium transition-all duration-300 ease-in-out ${
+                statusFilter === value
+                  ? "text-white"
+                  : "text-blue-500 hover:text-blue-500"
+              }`}
+            >
+              {value === "all"
+                ? "Semua"
+                : value === "active"
+                  ? "Aktif"
+                  : "Tidak Aktif"}
+            </button>
+          ))}
+        </div>
+
+        {/* Counter */}
+        <div className="rounded-md bg-purple-100 px-4 py-2 text-sm font-semibold text-purple-800 shadow-sm ring-1 ring-purple-200 ring-inset">
+          {filteredCount} Stand
+        </div>
+      </div>
+
+      {/* Grid Cards */}
+      <FoodcourtCardGrid
+        query={query}
+        onQueryChange={setQuery}
+        statusFilter={statusFilter}
+        onCountChange={setFilteredCount}
+      />
     </div>
   );
 }

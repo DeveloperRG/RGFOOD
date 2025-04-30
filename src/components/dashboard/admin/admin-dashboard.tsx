@@ -42,14 +42,14 @@ export function AdminDashboard({
       <div>
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-muted-foreground">
-          Manage food courts, owners, and overall platform operations
+          Mengelola Stand, pemilik, dan keseluruhan operasi platform
         </p>
       </div>
 
       {/* Dashboard metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardMetricCard
-          title="Food Courts"
+          title="Stand"
           value={metrics.foodCourtCount}
           description="Total registered food courts"
           icon={<Store className="h-5 w-5" />}
@@ -57,25 +57,12 @@ export function AdminDashboard({
           href="/admin/foodcourts"
         />
         <DashboardMetricCard
-          title="Food Court Owners"
+          title="Pemilik Stand"
           value={metrics.ownerCount}
           description="Total registered owners"
           icon={<Users className="h-5 w-5" />}
           trend={null}
-        />
-        <DashboardMetricCard
-          title="Orders"
-          value={metrics.orderCount}
-          description="Total orders processed"
-          icon={<ShoppingCart className="h-5 w-5" />}
-          trend={null}
-        />
-        <DashboardMetricCard
-          title="Menu Items"
-          value={metrics.totalMenuItems}
-          description="Total menu items available"
-          icon={<Book className="h-5 w-5" />}
-          trend={null}
+          href="/admin/owners"
         />
       </div>
 
