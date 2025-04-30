@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import Image from "next/image";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -23,7 +22,6 @@ interface Foodcourt {
   id: string;
   name: string;
   description: string | null;
-  logo: string;
   logo: string;
   address: string;
   status: string; // Added status field
@@ -61,7 +59,6 @@ export default function TablePage() {
   const [filteredFoodcourts, setFilteredFoodcourts] = useState<Foodcourt[]>([]);
   const [cartItemCount, setCartItemCount] = useState(0);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
-  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Load cart item count
   useEffect(() => {
@@ -86,7 +83,6 @@ export default function TablePage() {
         }
 
         const data = await response.json();
-        console.log("Table Info:", data);
         console.log("Table Info:", data);
         setTableInfo(data);
 
@@ -133,23 +129,10 @@ export default function TablePage() {
           logo: "https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg",
         }));
 
-        console.log("Foodcourts data:", data);
-
-        // Add the Pexels image URL to all foodcourts
-        const updatedData = data.map((fc: Foodcourt) => ({
-          ...fc,
-          logo: "https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg",
-        }));
-
         // Fetch categories for each foodcourt
         const foodcourtsWithCategories = await Promise.all(
           updatedData.map(async (foodcourt: Foodcourt) => {
-          updatedData.map(async (foodcourt: Foodcourt) => {
             try {
-              const categoryResponse = await fetch(
-                `/api/public/foodcourt/${foodcourt.id}/categories`,
-              );
-
               const categoryResponse = await fetch(
                 `/api/public/foodcourt/${foodcourt.id}/categories`,
               );
@@ -159,13 +142,8 @@ export default function TablePage() {
                 return { ...foodcourt, categories };
               }
 
-
               return foodcourt;
             } catch (err) {
-              console.error(
-                `Error fetching categories for foodcourt ${foodcourt.id}:`,
-                err,
-              );
               console.error(
                 `Error fetching categories for foodcourt ${foodcourt.id}:`,
                 err,
@@ -173,16 +151,7 @@ export default function TablePage() {
               return foodcourt;
             }
           }),
-          }),
         );
-
-        // Log to check if logos are present in the data
-        foodcourtsWithCategories.forEach((fc: Foodcourt) => {
-          console.log(
-            `Foodcourt ${fc.name} has logo: ${fc.logo ? "Yes" : "No"}`,
-          );
-        });
-
 
         // Log to check if logos are present in the data
         foodcourtsWithCategories.forEach((fc: Foodcourt) => {
@@ -220,20 +189,10 @@ export default function TablePage() {
             foodcourt.categories.some((category) =>
               category.name.toLowerCase().includes(searchQuery.toLowerCase()),
             )),
-            foodcourt.categories.some((category) =>
-              category.name.toLowerCase().includes(searchQuery.toLowerCase()),
-            )),
       );
       setFilteredFoodcourts(filtered);
     }
   }, [searchQuery, foodcourts]);
-
-  const handleImageError = (id: string) => {
-    setImgErrors((prev) => ({
-      ...prev,
-      [id]: true,
-    }));
-  };
 
   const handleImageError = (id: string) => {
     setImgErrors((prev) => ({
@@ -283,7 +242,6 @@ export default function TablePage() {
           </span>
           {tableInfo?.hasActiveOrder && (
             <span className="mt-1 rounded-full bg-green-200 px-2 py-0.5 text-sm text-green-800">
-            <span className="mt-1 rounded-full bg-green-200 px-2 py-0.5 text-sm text-green-800">
               Order in progress
             </span>
           )}
@@ -296,7 +254,6 @@ export default function TablePage() {
             </span>
           )}
         </div>
-        <p className="text-bold mt-1">Pesanan Kamu Akan Dikirim ke Sini</p>
         <p className="text-bold mt-1">Pesanan Kamu Akan Dikirim ke Sini</p>
       </div>
       {/* Search - Diletakkan setelah banner */}
@@ -314,7 +271,6 @@ export default function TablePage() {
               variant="ghost"
               size="icon"
               className="absolute top-1.5 right-1 h-5 w-6"
-              className="absolute top-1.5 right-1 h-5 w-6"
               onClick={() => setSearchQuery("")}
             >
               <X className="h-4 w-4" />
@@ -326,7 +282,6 @@ export default function TablePage() {
       <div className="mx-auto max-w-4xl space-y-4 px-4">
         {filteredFoodcourts.length > 0 ? (
           filteredFoodcourts.map((foodcourt) => (
-            <div
             <div
               key={foodcourt.id}
               className="relative rounded-xl bg-green-600 pb-4 shadow-md"
@@ -448,4 +403,3 @@ export default function TablePage() {
     </div>
   );
 }
-

@@ -108,8 +108,6 @@ export default function FoodcourtsPage() {
       <FoodcourtCardGrid
         query={query}
         onQueryChange={setQuery}
-        statusFilter={statusFilter}
-        onCountChange={setFilteredCount}
       />
     </div>
   );
