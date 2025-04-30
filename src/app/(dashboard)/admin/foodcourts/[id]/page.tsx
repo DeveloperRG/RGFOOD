@@ -180,7 +180,7 @@ export default function FoodcourtDetailsPage() {
     !!foodcourt.owner && foodcourt.owner.email !== "system@foodcourt.internal";
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-0">
       <div className="mb-6">
         <Link href="/admin/foodcourts">
           <Button variant="outline" size="sm">
@@ -191,7 +191,9 @@ export default function FoodcourtDetailsPage() {
       </div>
 
       <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-start gap-4">
+        {/* Kiri: Logo dan info */}
+        <div className="flex items-center gap-4">
+          {/* Logo */}
           <div className="bg-muted/20 h-16 w-16 overflow-hidden rounded-md border">
             {foodcourt.logo ? (
               <img
@@ -202,7 +204,7 @@ export default function FoodcourtDetailsPage() {
             ) : (
               <div className="text-muted-foreground flex h-full w-full items-center justify-center">
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
+                  xmlns="https://www.pexels.com/photo/flat-lay-photography-of-vegetable-salad-on-plate-1640777" 
                   width="24"
                   height="24"
                   viewBox="0 0 24 24"
@@ -218,12 +220,21 @@ export default function FoodcourtDetailsPage() {
               </div>
             )}
           </div>
+
+          {/* Nama & Badge */}
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
               {foodcourt.name}
             </h1>
-            <div className="mt-2 flex items-center gap-2">
-              <Badge variant={foodcourt.isActive ? "default" : "destructive"}>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge
+                variant={foodcourt.isActive ? "default" : "destructive"}
+                className={
+                  foodcourt.isActive
+                    ? "border-green-150 bg-green-100 text-green-700"
+                    : "border-red-150 bg-red-100 text-red-700"
+                }
+              >
                 {foodcourt.isActive ? "Active" : "Inactive"}
               </Badge>
               {hasRealOwner && (
@@ -234,10 +245,12 @@ export default function FoodcourtDetailsPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+
+        {/* Kanan: Tombol */}
+        <div className="flex flex-col items-end gap-2">
           <Link href={`/admin/foodcourts/${foodcourtId}/edit`}>
             <Button variant="outline">
-              <Edit className="mr-2 h-4 w-4" />
+              <Edit className="mr-1 h-4 w-4" />
               Edit Foodcourt
             </Button>
           </Link>
@@ -253,10 +266,10 @@ export default function FoodcourtDetailsPage() {
       </div>
 
       {/* FoodcourtDetails component integrated directly */}
-      <div className="grid gap-6">
+      <div className="grid gap-2">
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>Detail Information</CardTitle>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -278,14 +291,6 @@ export default function FoodcourtDetailsPage() {
                 </dt>
                 <dd className="mt-1 text-sm">
                   {foodcourt.description || "No description provided"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-sm font-medium">
-                  Status
-                </dt>
-                <dd className="mt-1 text-sm">
-                  {foodcourt.isActive ? "Active" : "Inactive"}
                 </dd>
               </div>
               <div>

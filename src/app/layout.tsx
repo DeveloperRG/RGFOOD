@@ -6,6 +6,7 @@ import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 
+
 export const metadata: Metadata = {
   title: "RGT MENU",
   description: "Rgt Menu App",

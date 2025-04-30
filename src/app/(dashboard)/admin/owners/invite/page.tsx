@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { InviteOwnerForm } from "~/components/owners/invite-owner-form";
+import { InviteOwnerForm } from "~/components/owner/invite-owner-form";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";

@@ -36,7 +36,7 @@ export function PendingRegistrationsCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Pending Registrations</CardTitle>
+          <CardTitle>Pendaftaran Tertunda</CardTitle>
           <CardDescription>
             Owners who need to be assigned to a foodcourt
           </CardDescription>
