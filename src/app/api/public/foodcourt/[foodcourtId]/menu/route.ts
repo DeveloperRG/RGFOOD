@@ -12,7 +12,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { foodcourtId } = params;
     const { searchParams } = new URL(request.url);
-    const categoryId = searchParams.get("categoryId");
+    // Using category type instead of categoryId since there's no categoryId in MenuItem
+    const category = searchParams.get("category");
 
     if (!foodcourtId) {
       return NextResponse.json(
@@ -38,11 +39,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get menu items for this foodcourt
+    // Note: since there's no direct categoryId in MenuItem, we can't filter by it
+    // If you want to filter by category, you'll need to add this field to the schema
     const menuItems = await db.menuItem.findMany({
       where: {
         foodcourtId: foodcourtId,
         isAvailable: true,
-        ...(categoryId && { categoryId }),
       },
       select: {
         id: true,
@@ -50,18 +52,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         description: true,
         price: true,
         imageUrl: true,
-        categoryId: true,
-        category: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        category: {
-          displayOrder: "asc",
-        },
       },
     });
 

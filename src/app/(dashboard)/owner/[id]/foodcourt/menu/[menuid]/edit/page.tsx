@@ -1,30 +1,48 @@
 // ~/app/(dashboard)/owner/[id]/foodcourt/menu/[menuId]/edit/page.tsx
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { ChevronLeft, Save, ImagePlus, X, Loader2 } from "lucide-react";
-import { Skeleton } from "~/components/ui/skeleton";
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
+import { toast } from "sonner";
+import { ArrowLeft, Save, X, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
-interface Category {
-  id: string;
-  name: string;
-}
+// Form schema with validation
+const formSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  description: z.string().optional(),
+  price: z.coerce.number().positive("Price must be greater than 0"),
+  imageUrl: z.string().optional(),
+  isAvailable: z.boolean(),
+  categoryId: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 interface MenuItem {
   id: string;
@@ -32,452 +50,281 @@ interface MenuItem {
   description: string | null;
   price: number;
   imageUrl: string | null;
-  categoryId: string | null;
-  category: {
-    id: string;
-    name: string;
-  } | null;
   isAvailable: boolean;
+  foodcourtId: string;
+  categoryId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function EditMenuItemPage() {
   const params = useParams();
-  const ownerId = params.id as string;
-  const menuId = params.menuId as string;
   const router = useRouter();
-
+  const [menuItem, setMenuItem] = useState<MenuItem | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [originalData, setOriginalData] = useState<MenuItem | null>(null);
-  const [formData, setFormData] = useState<{
-    name: string;
-    description: string;
-    price: string | number;
-    imageUrl: string;
-    categoryId: string;
-    isAvailable: boolean;
-  }>({
-    name: "",
-    description: "",
-    price: 0,
-    imageUrl: "",
-    categoryId: "",
-    isAvailable: true,
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize the form
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: 0,
+      imageUrl: "",
+      isAvailable: true,
+      categoryId: "",
+    },
   });
 
-  const [newCategory, setNewCategory] = useState("");
-  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
-
+  // Fetch menu item data when the component mounts
   useEffect(() => {
-    async function fetchData() {
+    async function fetchMenuItem() {
       try {
         setLoading(true);
+        const response = await fetch(
+          `/api/foodcourt/${params.id}/menu/${params.menuId}`,
+        );
 
-        // Fetch menu item
-        const menuRes = await fetch(`/api/foodcourt/${ownerId}/menu/${menuId}`);
-        if (!menuRes.ok) {
-          console.error("Failed to load menu item:", await menuRes.text());
-          toast.error("Failed to load menu item");
-          return;
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${await response.text()}`);
         }
 
-        const { menuItem } = await menuRes.json();
-        console.log("Fetched menu item:", menuItem);
-        setOriginalData(menuItem);
+        const data = await response.json();
+        setMenuItem(data.menuItem);
 
-        // Fetch categories using standalone categories API
-        const catRes = await fetch(`/api/categories`);
-        if (catRes.ok) {
-          const { categories } = await catRes.json();
-          setCategories(categories || []);
-        } else {
-          console.error("Failed to fetch categories:", await catRes.text());
-        }
-
-        setFormData({
-          name: menuItem.name || "",
-          description: menuItem.description || "",
-          price: menuItem.price || 0,
-          imageUrl: menuItem.imageUrl || "",
-          categoryId: menuItem.categoryId || "",
-          isAvailable:
-            menuItem.isAvailable !== undefined ? menuItem.isAvailable : true,
+        // Set form values
+        form.reset({
+          name: data.menuItem.name,
+          description: data.menuItem.description || "",
+          price: data.menuItem.price,
+          imageUrl: data.menuItem.imageUrl || "",
+          isAvailable: data.menuItem.isAvailable,
+          categoryId: data.menuItem.categoryId || "",
         });
       } catch (err) {
-        console.error("Error fetching data:", err);
-        toast.error("Something went wrong");
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch menu item",
+        );
+        toast.error("Failed to load menu item details");
       } finally {
         setLoading(false);
       }
     }
 
-    if (ownerId && menuId) fetchData();
-  }, [ownerId, menuId]);
-
-  function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  }
-
-  function handlePriceChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
-
-    // Allow only digits and a single decimal point
-    if (/^\d*\.?\d*$/.test(value) || value === "") {
-      setFormData((prev) => ({
-        ...prev,
-        price: value,
-      }));
+    if (params.id && params.menuId) {
+      fetchMenuItem();
     }
-  }
+  }, [params.id, params.menuId, form]);
 
-  function resetForm() {
-    if (!originalData) return;
-
-    setFormData({
-      name: originalData.name || "",
-      description: originalData.description || "",
-      price: originalData.price || 0,
-      imageUrl: originalData.imageUrl || "",
-      categoryId: originalData.categoryId || "",
-      isAvailable:
-        originalData.isAvailable !== undefined
-          ? originalData.isAvailable
-          : true,
-    });
-
-    toast.info("Form has been reset to original values");
-  }
-
-  async function addNewCategory() {
-    if (!newCategory.trim()) return;
-
+  // Handle form submission
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      // Use standalone categories API for adding new category
-      const res = await fetch(`/api/categories`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newCategory.trim() }),
-      });
+      setSaving(true);
+      const response = await fetch(
+        `/api/foodcourt/${params.id}/menu/${params.menuId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(values),
+        },
+      );
 
-      if (res.ok) {
-        const category = await res.json();
-        setCategories([...categories, category]);
-        setFormData((prev) => ({ ...prev, categoryId: category.id }));
-        setNewCategory("");
-        setShowNewCategoryInput(false);
-        toast.success("Category added");
-      } else {
-        const errorText = await res.text();
-        console.error("Failed to add category:", errorText);
-        toast.error("Failed to add category");
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${await response.text()}`);
       }
+
+      toast.success("Menu item updated successfully");
+      // Navigate back to the menu item detail view
+      router.push(`/owner/${params.id}/foodcourt/menu/${params.menuId}`);
     } catch (err) {
-      console.error("Error adding category:", err);
-      toast.error("An error occurred");
-    }
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    // Simple validation
-    if (!formData.name.trim()) {
-      toast.error("Item name is required");
-      return;
-    }
-
-    if (Number(formData.price) <= 0) {
-      toast.error("Valid price is required");
-      return;
-    }
-
-    setSubmitting(true);
-
-    // Prepare the data for submission with the proper types
-    const submissionData = {
-      name: formData.name,
-      description: formData.description,
-      price: Number(formData.price),
-      imageUrl: formData.imageUrl,
-      categoryId: formData.categoryId === "null" ? null : formData.categoryId,
-      isAvailable: formData.isAvailable,
-    };
-
-    try {
-      const res = await fetch(`/api/foodcourt/${ownerId}/menu/${menuId}`, {
-        method: "PATCH", // Using PATCH instead of PUT to update only the specified fields
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submissionData),
-      });
-
-      if (res.ok) {
-        toast.success("Menu item updated successfully");
-        router.push(`/owner/${ownerId}/foodcourt/menu/${menuId}`);
-      } else {
-        const errorText = await res.text();
-        console.error("Failed to update menu item:", errorText);
-        toast.error("Failed to update menu item");
-      }
-    } catch (err) {
-      console.error("Error during submission:", err);
-      toast.error("An error occurred");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update menu item",
+      );
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
-  }
-
-  function clearImage() {
-    setFormData((prev) => ({ ...prev, imageUrl: "" }));
   }
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 p-4">
-        <div className="flex items-center">
-          <Skeleton className="h-8 w-48" />
+      <div className="container mx-auto py-8">
+        <div className="flex h-64 items-center justify-center">
+          <p>Loading menu item details...</p>
         </div>
-        <Skeleton className="h-10 w-1/3" />
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-36" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ))}
-            <Skeleton className="mt-4 h-10 w-32" />
-          </CardContent>
-        </Card>
+      </div>
+    );
+  }
+
+  if (error || !menuItem) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex h-64 flex-col items-center justify-center">
+          <AlertCircle className="mb-4 h-12 w-12 text-red-500" />
+          <h3 className="mb-2 text-xl font-semibold">Menu Item Not Found</h3>
+          <p className="text-muted-foreground mb-6">
+            {error || "The requested menu item could not be found."}
+          </p>
+          <Button
+            onClick={() => router.push(`/owner/${params.id}/foodcourt/menu`)}
+          >
+            Return to Menu
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4">
-      <div>
-        <Button
-          variant="ghost"
-          className="mb-2 -ml-4 flex items-center gap-1"
-          onClick={() =>
-            router.push(`/owner/${ownerId}/foodcourt/menu/${menuId}`)
-          }
-        >
-          <ChevronLeft className="h-4 w-4" /> Back to Item Details
-        </Button>
-        <h1 className="text-2xl font-bold">Edit Menu Item</h1>
+    <div className="container mx-auto py-8">
+      <div className="mb-6">
+        <div className="mb-4 flex items-center">
+          <Button
+            variant="ghost"
+            onClick={() =>
+              router.push(`/owner/${params.id}/foodcourt/menu/${params.menuId}`)
+            }
+            className="mr-2"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Item Details
+          </Button>
+          <h1 className="text-2xl font-bold">Edit Menu Item</h1>
+        </div>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Edit Item Details</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={resetForm}
-            className="text-xs"
-          >
-            Reset Changes
-          </Button>
+        <CardHeader>
+          <CardTitle>Edit {menuItem.name}</CardTitle>
+          <CardDescription>
+            Update the details of this menu item
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Item Name *</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Enter item name"
-                required
-              />
-            </div>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Menu item name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          step="100"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Price in IDR (e.g. 25000)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
                 name="description"
-                value={formData.description || ""}
-                onChange={handleChange}
-                placeholder="Enter item description"
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="price">Price *</Label>
-                <div className="relative">
-                  <span className="absolute top-3 left-3">$</span>
-                  <Input
-                    id="price"
-                    name="price"
-                    value={formData.price}
-                    onChange={handlePriceChange}
-                    placeholder="0.00"
-                    className="pl-8"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {showNewCategoryInput ? (
-                  <div>
-                    <Label htmlFor="newCategory">New Category</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="newCategory"
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                        placeholder="Enter new category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe this menu item"
+                        className="min-h-[120px]"
+                        {...field}
+                        value={field.value || ""}
                       />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={addNewCategory}
-                        className="shrink-0"
-                      >
-                        Add
-                      </Button>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-muted-foreground mt-1 h-auto p-0 text-xs"
-                      onClick={() => setShowNewCategoryInput(false)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <div>
-                    <Label htmlFor="categoryId">Category</Label>
-                    <div className="flex gap-2">
-                      <Select
-                        value={formData.categoryId}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            categoryId: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger id="categoryId" className="w-full">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="null">No Category</SelectItem>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="text-muted-foreground mt-1 h-auto p-0 text-xs"
-                      onClick={() => setShowNewCategoryInput(true)}
-                    >
-                      + Add New Category
-                    </Button>
-                  </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3">
-                <div className="relative md:col-span-2">
-                  <Input
-                    id="imageUrl"
-                    name="imageUrl"
-                    value={formData.imageUrl || ""}
-                    onChange={handleChange}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                  {formData.imageUrl && (
-                    <button
-                      type="button"
-                      className="hover:bg-muted absolute top-2 right-2 rounded-full p-1"
-                      onClick={clearImage}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex h-24 items-center justify-center rounded border p-4">
-                  {formData.imageUrl ? (
-                    <img
-                      src={formData.imageUrl}
-                      alt="Preview"
-                      className="max-h-20 max-w-full object-contain"
-                      onError={() =>
-                        setFormData((prev) => ({ ...prev, imageUrl: "" }))
-                      }
-                    />
-                  ) : (
-                    <div className="text-muted-foreground flex flex-col items-center text-center">
-                      <ImagePlus className="mb-1 h-8 w-8" />
-                      <span className="text-xs">Image Preview</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Label htmlFor="isAvailable">Available for order</Label>
-              <Switch
-                id="isAvailable"
-                checked={formData.isAvailable}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({ ...prev, isAvailable: checked }))
-                }
               />
-            </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  router.push(`/owner/${ownerId}/foodcourt/menu/${menuId}`)
-                }
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="flex items-center gap-2"
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </>
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Image URL</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://example.com/image.jpg"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Link to an image of this menu item
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-            </div>
-          </form>
+              />
+
+              <FormField
+                control={form.control}
+                name="isAvailable"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Availability</FormLabel>
+                      <FormDescription>
+                        Is this menu item currently available?
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-between pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    router.push(
+                      `/owner/${params.id}/foodcourt/menu/${params.menuId}`,
+                    )
+                  }
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
