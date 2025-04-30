@@ -1,3 +1,4 @@
+// ~/src/app/(dashboard)/admin/foodcourts/page.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -41,33 +42,31 @@ export default function FoodcourtsPage() {
   }, [statusFilter]);
 
   return (
-    <div className="custom-scrollbar container mx-auto overflow-auto py-0">
-      {/* Bagian Judul dan Filter */}
-      <div className="mb-4">
-        {/* Judul */}
-        <div className="mb-2">
-          <h1 className="text-2xl font-bold tracking-tight">Stand</h1>
-          <p className="text-muted-foreground">
-            Kelola semua Stand Dalam Sistem
-          </p>
+    <div className="container mx-auto py-6">
+      <div className="mb-8">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Foodcourts</h1>
+            <p className="text-muted-foreground">
+              Manage all foodcourts in the system
+            </p>
+          </div>
         </div>
+      </div>
 
-        {/* Pencarian dan Tambah */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input
-            type="search"
-            placeholder="Cari Stand..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="group relative w-full rounded-xl border border-purple-300 p-2 transition-all duration-900 ease-in-out hover:border-transparent hover:ring-2 hover:ring-purple-500 focus:ring-2 focus:ring-red-500 sm:max-w-sm"
-          />
-          <Link href="/admin/foodcourts/new">
-            <Button className="w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tambahkan Stand
-            </Button>
-          </Link>
-        </div>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          placeholder="Search foodcourts..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="sm:w-[250px]"
+        />
+        <Link href="/admin/foodcourts/new">
+          <Button className="w-full sm:w-auto">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add New Foodcourt
+          </Button>
+        </Link>
       </div>
 
       {/* Status Filter Tabs + Counter */}
@@ -109,8 +108,6 @@ export default function FoodcourtsPage() {
       <FoodcourtCardGrid
         query={query}
         onQueryChange={setQuery}
-        statusFilter={statusFilter}
-        onCountChange={setFilteredCount}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-// app/api/public/foodcourt/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 
@@ -6,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const foodcourts = await db.foodcourt.findMany({
       where: {
-        isActive: true, // Only return active foodcourts
+        isActive: true,
       },
       select: {
         id: true,
@@ -14,6 +13,7 @@ export async function GET(request: NextRequest) {
         description: true,
         address: true,
         logo: true,
+        status: true, 
       },
     });
 
