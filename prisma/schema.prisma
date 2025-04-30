@@ -77,6 +77,7 @@ model Foodcourt {
   address     String
   logo        String?
   isActive    Boolean  @default(true)
+  status      FoodcourtStatus @default(BUKA)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -85,7 +86,7 @@ model Foodcourt {
   creatorId String
   creator   User     @relation("FoodcourtCreator", fields: [creatorId], references: [id])
 
-  foodcourtCategories FoodcourtCategory[]
+  categories FoodcourtCategory[]
   menuItems          MenuItem[]
   orderItems         OrderItem[]
   ownerNotifications OwnerNotification[]
@@ -96,17 +97,17 @@ model Foodcourt {
 }
 
 model FoodcourtCategory {
-  id           String   @id @default(cuid())
-  name         String
-  description  String?
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id           String       @id @default(cuid())
+  category         CategoryType
   foodcourtId  String
-  foodcourt    Foodcourt @relation(fields: [foodcourtId], references: [id])
+  foodcourt    Foodcourt    @relation(fields: [foodcourtId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
+  @@unique([foodcourtId, category])
   @@map("foodcourt_categories")
 }
+
 
 model Table {
   id            String         @id @default(cuid())
@@ -133,18 +134,6 @@ model TableSession {
   @@map("table_sessions")
 }
 
-model MenuCategory {
-  id              String    @id @default(cuid())
-  name            String
-  description     String?
-  displayOrder    Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  menuItems       MenuItem[]
-
-  @@map("menu_categories")
-}
-
 model MenuItem {
   id          String        @id @default(cuid())
   name        String
@@ -156,7 +145,6 @@ model MenuItem {
   updatedAt   DateTime      @updatedAt
   foodcourtId String
   categoryId  String?
-  category    MenuCategory? @relation(fields: [categoryId], references: [id])
   foodcourt   Foodcourt     @relation(fields: [foodcourtId], references: [id])
   orderItems  OrderItem[]
 
@@ -265,4 +253,16 @@ enum OrderStatus {
   READY
   DELIVERED
   CANCELED
+}
+
+enum CategoryType {
+  MAKANAN_UTAMA
+  MINUMAN
+  CEMILAN
+  MAKANAN_MANIS
+}
+
+enum FoodcourtStatus {
+  BUKA
+  TUTUP
 }
