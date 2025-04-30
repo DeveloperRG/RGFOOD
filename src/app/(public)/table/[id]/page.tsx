@@ -1,10 +1,9 @@
-// ~/src/app/(public)/table/[id]/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -15,7 +14,7 @@ interface Foodcourt {
   id: string;
   name: string;
   description: string | null;
-  logo: string | null;
+  logo: string;
   address: string;
   categories?: FoodcourtCategory[]; // Optional categories
 }
@@ -50,6 +49,7 @@ export default function TablePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredFoodcourts, setFilteredFoodcourts] = useState<Foodcourt[]>([]);
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   // Load cart item count
   useEffect(() => {
@@ -74,6 +74,7 @@ export default function TablePage() {
         }
 
         const data = await response.json();
+        console.log("Table Info:", data);
         setTableInfo(data);
 
         // If there is an active order, check for new orders every 30 seconds
@@ -111,26 +112,45 @@ export default function TablePage() {
         }
 
         const data = await response.json();
-        
+        console.log("Foodcourts data:", data);
+
+        // Add the Pexels image URL to all foodcourts
+        const updatedData = data.map((fc: Foodcourt) => ({
+          ...fc,
+          logo: "https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg",
+        }));
+
         // Fetch categories for each foodcourt
         const foodcourtsWithCategories = await Promise.all(
-          data.map(async (foodcourt: Foodcourt) => {
+          updatedData.map(async (foodcourt: Foodcourt) => {
             try {
-              const categoryResponse = await fetch(`/api/public/foodcourt/${foodcourt.id}/categories`);
-              
+              const categoryResponse = await fetch(
+                `/api/public/foodcourt/${foodcourt.id}/categories`,
+              );
+
               if (categoryResponse.ok) {
                 const categories = await categoryResponse.json();
                 return { ...foodcourt, categories };
               }
-              
+
               return foodcourt;
             } catch (err) {
-              console.error(`Error fetching categories for foodcourt ${foodcourt.id}:`, err);
+              console.error(
+                `Error fetching categories for foodcourt ${foodcourt.id}:`,
+                err,
+              );
               return foodcourt;
             }
-          })
+          }),
         );
-        
+
+        // Log to check if logos are present in the data
+        foodcourtsWithCategories.forEach((fc: Foodcourt) => {
+          console.log(
+            `Foodcourt ${fc.name} has logo: ${fc.logo ? "Yes" : "No"}`,
+          );
+        });
+
         setFoodcourts(foodcourtsWithCategories);
         setFilteredFoodcourts(foodcourtsWithCategories);
       } catch (err) {
@@ -157,13 +177,20 @@ export default function TablePage() {
               .includes(searchQuery.toLowerCase())) ||
           // Also search by category names
           (foodcourt.categories &&
-            foodcourt.categories.some(category =>
-              category.name.toLowerCase().includes(searchQuery.toLowerCase())
-            ))
+            foodcourt.categories.some((category) =>
+              category.name.toLowerCase().includes(searchQuery.toLowerCase()),
+            )),
       );
       setFilteredFoodcourts(filtered);
     }
   }, [searchQuery, foodcourts]);
+
+  const handleImageError = (id: string) => {
+    setImgErrors((prev) => ({
+      ...prev,
+      [id]: true,
+    }));
+  };
 
   // Loading state
   if (loading && foodcourts.length === 0) {
@@ -191,13 +218,13 @@ export default function TablePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
       {/* Table Info Banner */}
-      <div className="bg-green-100 p-4 text-center text-green-800">
+      <div className="bg-green-600 p-4 text-center text-white">
         <div className="flex flex-col items-center justify-center">
           <span className="text-lg font-medium">
             Table #{tableInfo?.tableNumber || tableId}
           </span>
           {tableInfo?.hasActiveOrder && (
-            <span className="mt-1 rounded-full bg-green-200 px-2 py-0.5 text-sm">
+            <span className="mt-1 rounded-full bg-green-200 px-2 py-0.5 text-sm text-green-800">
               Order in progress
             </span>
           )}
@@ -210,14 +237,14 @@ export default function TablePage() {
             </span>
           )}
         </div>
-        <p className="mt-1 text-sm">Your orders will be delivered here</p>
+        <p className="text-bold mt-1">Pesanan Kamu Akan Dikirim ke Sini</p>
       </div>
 
       {/* Search */}
-      <div className="mx-auto max-w-2xl p-4">
+      <div className="mx-auto max-w-2xl p-5">
         <div className="relative">
           <Input
-            placeholder="Search foodcourts..."
+            placeholder="Cari Stan Terdekat..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -227,7 +254,7 @@ export default function TablePage() {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute top-1.5 right-1 h-6 w-6"
+              className="absolute top-1.5 right-1 h-5 w-6"
               onClick={() => setSearchQuery("")}
             >
               <X className="h-4 w-4" />
@@ -238,64 +265,86 @@ export default function TablePage() {
 
       {/* Foodcourt List */}
       <div className="mx-auto max-w-4xl space-y-4 px-4">
-        <h2 className="mb-4 text-xl font-semibold">Available Food Stalls</h2>
-
         {filteredFoodcourts.length > 0 ? (
           filteredFoodcourts.map((foodcourt) => (
-            <Link
+            <div
               key={foodcourt.id}
-              href={`/table/${tableId}/foodcourt/${foodcourt.id}`}
-              className="block"
+              className="relative rounded-xl bg-green-600 pb-4 shadow-md"
             >
-              <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-                <CardContent className="p-0">
-                  <div className="flex items-center">
-                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden bg-gray-100">
-                      {foodcourt.logo ? (
-                        <img
-                          src={foodcourt.logo}
-                          alt={foodcourt.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-gray-400">
-                          <ShoppingBag className="h-8 w-8" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-1 items-center p-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{foodcourt.name}</h3>
-                        <p className="mt-1 line-clamp-1 text-sm text-gray-500">
-                          {foodcourt.description || "No description available"}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {foodcourt.address || "Address not available"}
-                        </p>
-                        
-                        {/* Display Foodcourt Categories */}
-                        {foodcourt.categories && foodcourt.categories.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {foodcourt.categories.slice(0, 3).map((category) => (
-                              <Badge key={category.id} variant="outline" className="bg-gray-100 text-xs">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {category.name}
-                              </Badge>
-                            ))}
-                            {foodcourt.categories.length > 3 && (
-                              <Badge variant="outline" className="bg-gray-100 text-xs">
-                                +{foodcourt.categories.length - 3} more
-                              </Badge>
-                            )}
+              <Link
+                href={`/table/${tableId}/foodcourt/${foodcourt.id}`}
+                className="block"
+              >
+                <Card className="overflow-hidden bg-white transition-shadow hover:shadow-lg">
+                  <CardContent className="p-0">
+                    <div className="flex items-center">
+                      <div className="ml-4 h-24 w-24 flex-shrink-0 overflow-hidden border-2 border-solid bg-gray-200">
+                        {foodcourt.logo &&
+                        foodcourt.logo.trim() !== "" &&
+                        !imgErrors[foodcourt.id] ? (
+                          // Menggunakan next/image untuk optimasi
+                          <div className="sticky">
+                            <Image
+                              src={foodcourt.logo}
+                              alt={foodcourt.name}
+                              width={96}
+                              height={96}
+                              className="h-28 w-30 object-cover"
+                              onError={() => handleImageError(foodcourt.id)}
+                              unoptimized={!foodcourt.logo.startsWith("/")}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-gray-400">
+                            <ShoppingBag className="h-8 w-8" />
                           </div>
                         )}
                       </div>
-                      <ArrowRight className="text-green-500" />
+                      <div className="flex flex-1 items-center p-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{foodcourt.name}</h3>
+                          <p className="mt-1 line-clamp-1 text-sm text-gray-500">
+                            {foodcourt.description ||
+                              "No description available"}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-400">
+                            {foodcourt.address || "Address not available"}
+                          </p>
+
+                          {/* Display Foodcourt Categories */}
+                          {foodcourt.categories &&
+                            foodcourt.categories.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {foodcourt.categories
+                                  .slice(0, 3)
+                                  .map((category) => (
+                                    <Badge
+                                      key={category.id}
+                                      variant="outline"
+                                      className="bg-gray-100 text-xs"
+                                    >
+                                      <Tag className="mr-1 h-3 w-3" />
+                                      {category.name}
+                                    </Badge>
+                                  ))}
+                                {foodcourt.categories.length > 3 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-gray-100 text-xs"
+                                  >
+                                    +{foodcourt.categories.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                        </div>
+                        <ArrowRight className="text-green-500" />
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           ))
         ) : (
           <Card className="p-8 text-center">
