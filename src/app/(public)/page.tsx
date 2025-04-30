@@ -79,79 +79,55 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen items-center bg-gray-50">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-        <div className="container mx-auto px-4 py-20">
-          <div className="grid items-center gap-8 md:grid-cols-2">
-            <div className="space-y-6">
+      <div className="items-center justify-center bg-green-600 to-indigo-700 text-white">
+        <div className="container mx-auto items-center px-4 py-20">
+          <div className="content-center">
+            <div className="content-center space-y-6">
               <h1 className="text-4xl leading-tight font-bold md:text-5xl lg:text-6xl">
-                Delicious food, <br />
-                <span className="text-yellow-300">delivered to your table</span>
+                Makanan yang Enak, <br />
+                <span className="text-yellow-300">Pesan ke Meja Anda</span>
               </h1>
               <p className="text-lg md:text-xl">
-                Browse, order, and enjoy meals from multiple foodcourts without
-                leaving your seat.
+                Cari, pesan, and nikmati makanan minuman yang kami sediakan
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div
+                className="flex flex-wrap gap-4 rounded-lg p-6"
+                style={{
+                  backgroundImage:
+                    'url("https://example.com/green-background.jpg")',
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              >
                 <Link
                   href="#table-selection"
-                  className="inline-flex items-center rounded-full bg-white px-6 py-3 font-medium text-blue-700 shadow-lg transition-all hover:bg-yellow-300"
+                  className="inline-flex items-center rounded-full bg-white px-6 py-3 font-medium text-green-700 shadow-lg transition-all hover:bg-yellow-300"
                 >
-                  Select a Table
+                  Pilih Meja
                   <ArrowRightIcon className="ml-2 h-5 w-5" />
                 </Link>
                 <Link
                   href="#how-it-works"
                   className="inline-flex items-center rounded-full border border-white px-6 py-3 font-medium text-white transition-all hover:bg-white hover:text-blue-700"
                 >
-                  How It Works
+                  Bagaimana ini Kerja
                 </Link>
-              </div>
-            </div>
-            <div className="relative hidden md:block">
-              <div className="relative h-96 w-full overflow-hidden rounded-lg shadow-xl">
-                <Image
-                  src="/api/placeholder/600/500"
-                  alt="Food Court Experience"
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </div>
-              <div className="absolute -bottom-6 -left-6 rounded-lg bg-white p-4 shadow-lg">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-green-100 p-2">
-                    <UtensilsIcon className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800">20+ Foodcourts</p>
-                    <p className="text-sm text-gray-500">All in one platform</p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Wave Shape Divider */}
-        <div className="absolute bottom-0 left-0 w-full overflow-hidden">
-          <svg
-            preserveAspectRatio="none"
-            viewBox="0 0 1200 120"
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-16 w-full fill-gray-50 md:h-24"
-          >
-            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" />
-          </svg>
-        </div>
+        <div className="absolute bottom-0 left-0 w-full overflow-hidden"></div>
       </div>
 
       {/* How It Works Section */}
       <div id="how-it-works" className="container mx-auto px-4 py-16">
         <div className="mb-12 text-center">
           <h2 className="mb-4 text-3xl font-bold text-gray-900 md:text-4xl">
-            How It Works
+            Bagaimana ini Bekerja
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-gray-600">
             Three simple steps to enjoy a seamless dining experience
@@ -227,14 +203,6 @@ export default function HomePage() {
                   key={foodcourt.id}
                   className="overflow-hidden rounded-xl bg-white shadow-lg"
                 >
-                  <div className="relative h-48">
-                    <Image
-                      src={`/api/placeholder/400/300`}
-                      alt={foodcourt.name}
-                      fill
-                      className="object-cover transition-transform hover:scale-105"
-                    />
-                  </div>
                   <div className="p-5">
                     <div className="mb-3 flex items-center justify-between">
                       <h3 className="text-xl font-bold">{foodcourt.name}</h3>
