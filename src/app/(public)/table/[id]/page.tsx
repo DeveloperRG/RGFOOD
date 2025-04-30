@@ -218,16 +218,26 @@ export default function TablePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
       {/* Table Info Banner */}
-      <div className="bg-green-600 p-4 text-center text-white">
-        <div className="flex flex-col items-center justify-center">
+      <div
+        className="p-20 text-center text-white"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1400&q=80')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="flex flex-col items-center justify-center rounded-xl bg-black/10 px-6 py-4 text-white shadow-lg backdrop-blur-sm">
           <span className="text-lg font-medium">
             Table #{tableInfo?.tableNumber || tableId}
           </span>
+
           {tableInfo?.hasActiveOrder && (
             <span className="mt-1 rounded-full bg-green-200 px-2 py-0.5 text-sm text-green-800">
               Order in progress
             </span>
           )}
+
           {tableInfo?.activeSession && (
             <span className="mt-1 text-xs">
               Session started:{" "}
@@ -237,19 +247,21 @@ export default function TablePage() {
             </span>
           )}
         </div>
-        <p className="text-bold mt-1">Pesanan Kamu Akan Dikirim ke Sini</p>
-      </div>
 
-      {/* Search */}
-      <div className="mx-auto max-w-2xl p-5">
+        <p className="text-bold mt-1 text-white">
+          Pesanan Kamu Akan Dikirim ke Sini
+        </p>
+      </div>
+      {/* Search - Diletakkan setelah banner */}
+      <div className="relative z-10 mx-auto -mt-10 max-w-2xl p-5">
         <div className="relative">
           <Input
-            placeholder="Cari Stan Terdekat..."
+            placeholder="lagi mau makan apa?"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="rounded-full bg-gray-100 pl-10"
           />
-          <Search className="absolute top-2.5 left-3 h-5 w-5 text-gray-400" />
+          <Search className="absolute top-2 right-20 left-3 h-5 w-5 text-gray-400" />
           {searchQuery && (
             <Button
               variant="ghost"
@@ -262,8 +274,7 @@ export default function TablePage() {
           )}
         </div>
       </div>
-
-      {/* Foodcourt List */}
+      ){/* Foodcourt List */}
       <div className="mx-auto max-w-4xl space-y-4 px-4">
         {filteredFoodcourts.length > 0 ? (
           filteredFoodcourts.map((foodcourt) => (
@@ -361,7 +372,6 @@ export default function TablePage() {
           </Card>
         )}
       </div>
-
       {/* Cart Button (if items in cart) */}
       {cartItemCount > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-50 bg-white px-4 py-3 shadow-md">
