@@ -204,7 +204,7 @@ export default function MenuListPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Foodcourt
           </Button>
-          <h1 className="text-2xl font-bold">Menu Management</h1>
+          <h1 className="text-2xl font-bold">Manajemen Menu</h1>
         </div>
         <p className="text-muted-foreground">
           Manage your foodcourt menu items, prices, and availability.
