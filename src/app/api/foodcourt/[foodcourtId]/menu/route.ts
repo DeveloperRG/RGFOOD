@@ -5,12 +5,12 @@ import { auth } from "~/server/auth";
 // GET /api/foodcourt/[foodcourtId]/menu - List menu items
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { foodcourtId: string } },
 ) {
   try {
     const session = await auth();
 
-    if (!params.id && !session?.user) {
+    if (!params.foodcourtId && !session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -20,14 +20,21 @@ export async function GET(
 
     let foodcourt = null;
 
-    // Try getting foodcourt from path param
-    if (params.id) {
+    // Try getting foodcourt from path param (could be foodcourt ID)
+    if (params.foodcourtId) {
       foodcourt = await db.foodcourt.findUnique({
-        where: { id: params.id },
+        where: { id: params.foodcourtId },
       });
     }
 
-    // Fallback to finding by owner ID
+    // If not found, check if the param is an owner ID
+    if (!foodcourt) {
+      foodcourt = await db.foodcourt.findFirst({
+        where: { ownerId: params.foodcourtId },
+      });
+    }
+
+    // If still not found but we have a session user, try getting their foodcourt
     if (!foodcourt && session?.user?.id) {
       foodcourt = await db.foodcourt.findFirst({
         where: { ownerId: session.user.id },
@@ -48,7 +55,6 @@ export async function GET(
 
     const menuItems = await db.menuItem.findMany({
       where,
-      include: { category: true },
       orderBy: { updatedAt: "desc" },
     });
 
@@ -65,11 +71,10 @@ export async function GET(
   }
 }
 
-
 // POST /api/foodcourt/[foodcourtId]/menu - Create a new menu item (Owner only)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { foodcourtId: string } },
 ) {
   try {
     const session = await auth();
@@ -100,14 +105,22 @@ export async function POST(
 
     // Get foodcourt either from param or by owner ID
     let foodcourt = null;
-    if (params.id) {
+    // Try getting foodcourt from path param (could be foodcourt ID)
+    if (params.foodcourtId) {
       foodcourt = await db.foodcourt.findUnique({
-        where: { id: params.id },
+        where: { id: params.foodcourtId },
       });
     }
 
-    // If not found or not passed in params, try getting foodcourt from ownerId (one-to-one)
+    // If not found, check if the param is an owner ID
     if (!foodcourt) {
+      foodcourt = await db.foodcourt.findFirst({
+        where: { ownerId: params.foodcourtId },
+      });
+    }
+
+    // If still not found but we have a session user, try getting their foodcourt
+    if (!foodcourt && session?.user?.id) {
       foodcourt = await db.foodcourt.findFirst({
         where: { ownerId: session.user.id },
       });
@@ -139,7 +152,7 @@ export async function POST(
     const isAdmin = user?.role === "ADMIN";
     const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
     const hasPermission =
-      !!userPermission || foodcourt.ownerId === session.user.id;
+      !!userPermission?.canEditMenu || foodcourt.ownerId === session.user.id;
 
     if (
       !hasPermission &&
@@ -162,7 +175,7 @@ export async function POST(
         description,
         price: priceValue,
         imageUrl,
-        isAvailable,
+        isAvailable: isAvailable ?? true,
         foodcourtId: foodcourt.id,
         categoryId,
       },

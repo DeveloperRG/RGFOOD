@@ -50,14 +50,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         price: true,
         imageUrl: true,
         isAvailable: true,
-        categoryId: true,
-        category: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-          },
-        },
       },
     });
 
