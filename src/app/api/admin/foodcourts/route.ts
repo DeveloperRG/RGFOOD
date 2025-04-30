@@ -1,177 +1,140 @@
-// ~/src/app/api/admin/foodcourts/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
+import { z } from 'zod';
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { UserRole, Prisma } from "@prisma/client";
 
-// GET: Fetch all foodcourts with pagination and search
+// Schema untuk validasi input pembuatan foodcourt
+const createFoodcourtSchema = z.object({
+  name: z.string().min(1, 'Nama foodcourt harus diisi'),
+  description: z.string().optional(),
+  address: z.string().min(1, 'Alamat harus diisi'),
+  logo: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+// Handler untuk mendapatkan daftar foodcourt
 export async function GET(req: NextRequest) {
   try {
+    // Periksa autentikasi
     const session = await auth();
-
-    // Check if user is authenticated and is an admin
-    if (session?.user?.role !== UserRole.ADMIN) {
+    if (!session || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
-        { error: "Unauthorized: Admin access required" },
-        { status: 403 },
+          { error: 'Unauthorized: Admin access required' },
+          { status: 403 }
       );
     }
 
-    // Parse query parameters
+    // Ambil query parameters
     const searchParams = req.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const search = searchParams.get("search") || "";
-
-    // Calculate pagination
+    const name = searchParams.get('name');
+    const isActive = searchParams.get('isActive');
+    const ownerId = searchParams.get('ownerId');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    // Create search filter if search parameter exists
-    const searchFilter = search
-      ? {
-          OR: [
-            { name: { contains: search, mode: Prisma.QueryMode.insensitive } },
-            {
-              description: {
-                contains: search,
-                mode: Prisma.QueryMode.insensitive,
-              },
-            },
-            {
-              address: { contains: search, mode: Prisma.QueryMode.insensitive },
-            },
-          ],
-        }
-      : {};
+    // Buat filter object untuk Prisma
+    const filter: Prisma.FoodcourtWhereInput = {};
 
-    // Fetch foodcourts with owner and creator information
-    const foodcourts = await db.foodcourt.findMany({
-      where: searchFilter,
-      skip,
-      take: limit,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    if (name) {
+      filter.name = { contains: name, mode: 'insensitive' };
+    }
+
+    if (isActive !== null && isActive !== undefined) {
+      filter.isActive = isActive === 'true';
+    }
+
+    if (ownerId) {
+      if (ownerId === 'unassigned') {
+        filter.ownerId = null;
+      } else {
+        filter.ownerId = ownerId;
+      }
+    }
+
+    // Ambil data foodcourt dengan filter
+    const [foodcourts, total] = await Promise.all([
+      db.foodcourt.findMany({
+        where: filter,
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-        foodcourtCategories: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    // Get total count for pagination
-    const totalCount = await db.foodcourt.count({
-      where: searchFilter,
-    });
-
-    // Calculate total pages
-    const totalPages = Math.ceil(totalCount / limit);
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      db.foodcourt.count({ where: filter }),
+    ]);
 
     return NextResponse.json({
-      foodcourts,
-      pagination: {
-        total: totalCount,
+      data: foodcourts,
+      meta: {
+        total,
         page,
         limit,
-        totalPages,
+        totalPages: Math.ceil(total / limit),
       },
     });
   } catch (error) {
-    console.error("Error fetching foodcourts:", error);
+    console.error('Error getting foodcourts:', error);
     return NextResponse.json(
-      { error: "Failed to fetch foodcourts" },
-      { status: 500 },
+        { error: 'Failed to get foodcourts' },
+        { status: 500 }
     );
   }
 }
 
-// POST: Create a new foodcourt
+// Handler untuk membuat foodcourt baru
 export async function POST(req: NextRequest) {
   try {
+    // Periksa autentikasi
     const session = await auth();
-
-    // Check if user is authenticated and is an admin
-    if (session?.user?.role !== UserRole.ADMIN) {
+    if (!session || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
-        { error: "Unauthorized: Admin access required" },
-        { status: 403 },
+          { error: 'Unauthorized: Admin access required' },
+          { status: 403 }
       );
     }
 
-    // Parse request body
+    // Parse dan validasi body request
     const body = await req.json();
-    const { name, description, address, logo, isActive, ownerId } = body;
+    const validatedData = createFoodcourtSchema.safeParse(body);
 
-    // Validate required fields
-    if (!name || !address) {
+    if (!validatedData.success) {
       return NextResponse.json(
-        { error: "Name and address are required" },
-        { status: 400 },
+          { error: 'Validation failed', details: validatedData.error.flatten() },
+          { status: 400 }
       );
     }
 
-    // If ownerId is provided, verify that owner exists and has correct role
-    if (ownerId) {
-      const owner = await db.user.findUnique({
-        where: { id: ownerId },
-      });
-
-      if (!owner) {
-        return NextResponse.json({ error: "Owner not found" }, { status: 404 });
-      }
-
-      // If owner is not a FOODCOURT_OWNER, update their role
-      if (owner.role !== UserRole.FOODCOURT_OWNER) {
-        await db.user.update({
-          where: { id: ownerId },
-          data: { role: UserRole.FOODCOURT_OWNER },
-        });
-      }
-    }
-
-    // Create the foodcourt with creatorId which is required according to schema
+    // Buat foodcourt baru
     const foodcourt = await db.foodcourt.create({
       data: {
-        name,
-        description,
-        address,
-        logo,
-        isActive: isActive ?? true,
+        ...validatedData.data,
         creatorId: session.user.id,
-        // Only set ownerId if provided
-        ...(ownerId && { ownerId }),
       },
     });
 
-    // Create default permissions if owner is assigned
-    if (ownerId) {
-      await db.ownerPermission.create({
-        data: {
-          ownerId,
-          foodcourtId: foodcourt.id,
-          canEditMenu: true,
-          canViewOrders: true,
-          canUpdateOrders: true,
-        },
-      });
-    }
-
-    return NextResponse.json(
-      {
-        message: "Foodcourt created successfully",
-        foodcourt,
-      },
-      { status: 201 },
-    );
+    return NextResponse.json(foodcourt, { status: 201 });
   } catch (error) {
-    console.error("Error creating foodcourt:", error);
+    console.error('Error creating foodcourt:', error);
     return NextResponse.json(
-      { error: "Failed to create foodcourt" },
-      { status: 500 },
+        { error: 'Failed to create foodcourt' },
+        { status: 500 }
     );
   }
 }
