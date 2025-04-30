@@ -1,4 +1,3 @@
-// ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
 
 // ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
 
