@@ -1,5 +1,3 @@
-// ~/src/app/(dashboard)/admin/owners/page.tsx
-
 import type { Metadata } from "next";
 import { db } from "~/server/db";
 import { Button } from "~/components/ui/button";
@@ -50,17 +48,17 @@ type FoodcourtOwner = {
 
 function OwnersTable({ owners }: { owners: FoodcourtOwner[] }) {
   return (
-    <div className="rounded-md border">
+    <div className="rounded-xl border bg-white p-4 shadow-md">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Verified</TableHead>
+            <TableHead className="text-center">Verified</TableHead>
             <TableHead>Foodcourts</TableHead>
             <TableHead>Permissions</TableHead>
             <TableHead>Joined</TableHead>
-            <TableHead className="w-[80px]">Actions</TableHead>
+            <TableHead className="w-[80px] text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -72,16 +70,19 @@ function OwnersTable({ owners }: { owners: FoodcourtOwner[] }) {
             </TableRow>
           ) : (
             owners.map((owner) => (
-              <TableRow key={owner.id}>
+              <TableRow
+                key={owner.id}
+                className="hover:bg-muted/50 transition-colors"
+              >
                 <TableCell className="font-medium">
                   {owner.name || "Unnamed"}
                 </TableCell>
                 <TableCell>{owner.email}</TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   {owner.emailVerified ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <CheckCircle className="mx-auto h-5 w-5 text-green-500" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-red-500" />
+                    <XCircle className="mx-auto h-5 w-5 text-red-500" />
                   )}
                 </TableCell>
                 <TableCell>
@@ -135,8 +136,8 @@ function OwnersTable({ owners }: { owners: FoodcourtOwner[] }) {
                     )}
                   </div>
                 </TableCell>
-                <TableCell>{format(owner.createdAt, "MMM d, yyyy")}</TableCell>
-                <TableCell>
+                <TableCell>{format(owner.createdAt, "dd MMMM yyyy")}</TableCell>
+                <TableCell className="text-center">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" className="h-8 w-8 p-0">
@@ -167,35 +168,36 @@ function OwnersTable({ owners }: { owners: FoodcourtOwner[] }) {
 }
 
 export default async function OwnersPage() {
-  // Fetch all users with FOODCOURT_OWNER role, including their foodcourts
-  const owners = (await db.user.findMany({
-    where: {
-      role: "FOODCOURT_OWNER",
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      createdAt: true,
-      emailVerified: true,
-      ownedFoodcourt: {
-        select: {
-          id: true,
-          name: true,
-          isActive: true,
+  const owners = (
+    await db.user.findMany({
+      where: {
+        role: "FOODCOURT_OWNER",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        emailVerified: true,
+        ownedFoodcourt: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          },
+        },
+        permissions: {
+          select: {
+            id: true,
+            canEditMenu: true,
+            canViewOrders: true,
+            canUpdateOrders: true,
+            foodcourtId: true,
+          },
         },
       },
-      permissions: {
-        select: {
-          id: true,
-          canEditMenu: true,
-          canViewOrders: true,
-          canUpdateOrders: true,
-          foodcourtId: true,
-        },
-      },
-    },
-  })).map((owner) => ({
+    })
+  ).map((owner) => ({
     ...owner,
     ownedFoodcourts: owner.ownedFoodcourt ? [owner.ownedFoodcourt] : [],
   }));
@@ -219,7 +221,9 @@ export default async function OwnersPage() {
         </Link>
       </div>
 
-      <OwnersTable owners={owners} />
+      <div className="mx-auto max-w-6xl">
+        <OwnersTable owners={owners} />
+      </div>
     </div>
   );
 }
