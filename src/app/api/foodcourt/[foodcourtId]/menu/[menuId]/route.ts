@@ -47,7 +47,6 @@ export async function GET(
         id: params.menuId,
         foodcourtId: foodcourt.id,
       },
-      include: { category: true },
     });
 
     if (!menuItem) {
@@ -67,10 +66,10 @@ export async function GET(
   }
 }
 
-// PATCH /api/foodcourt/[id]/menu/[menuId] - Update a menu item
+// PATCH /api/foodcourt/[foodcourtId]/menu/[menuId] - Update a menu item
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; menuId: string } },
+  { params }: { params: { foodcourtId: string; menuId: string } },
 ) {
   try {
     const session = await auth();
@@ -80,18 +79,26 @@ export async function PATCH(
     }
 
     const data = await request.json();
-    const { name, description, price, imageUrl, isAvailable, categoryId } = data;
+    const { name, description, price, imageUrl, isAvailable, categoryId } =
+      data;
 
     // Get foodcourt either from param or by owner ID
     let foodcourt = null;
-    if (params.id) {
+    if (params.foodcourtId) {
       foodcourt = await db.foodcourt.findUnique({
-        where: { id: params.id },
+        where: { id: params.foodcourtId },
       });
     }
 
-    // If not found or not passed in params, try getting foodcourt from ownerId (one-to-one)
+    // If not found, check if the param is an owner ID
     if (!foodcourt) {
+      foodcourt = await db.foodcourt.findFirst({
+        where: { ownerId: params.foodcourtId },
+      });
+    }
+
+    // If still not found but we have a session user, try getting their foodcourt
+    if (!foodcourt && session?.user?.id) {
       foodcourt = await db.foodcourt.findFirst({
         where: { ownerId: session.user.id },
       });
@@ -123,7 +130,7 @@ export async function PATCH(
     const isAdmin = user?.role === "ADMIN";
     const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
     const hasPermission =
-      !!userPermission || foodcourt.ownerId === session.user.id;
+      !!userPermission?.canEditMenu || foodcourt.ownerId === session.user.id;
 
     if (
       !hasPermission &&
@@ -173,6 +180,110 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: "Failed to update menu item",
+        details: (error as Error).message,
+      },
+      { status: 500 },
+    );
+  }
+}
+
+// DELETE /api/foodcourt/[foodcourtId]/menu/[menuId] - Delete a menu item
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { foodcourtId: string; menuId: string } },
+) {
+  try {
+    const session = await auth();
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Get foodcourt either from param or by owner ID
+    let foodcourt = null;
+    if (params.foodcourtId) {
+      foodcourt = await db.foodcourt.findUnique({
+        where: { id: params.foodcourtId },
+      });
+    }
+
+    // If not found, check if the param is an owner ID
+    if (!foodcourt) {
+      foodcourt = await db.foodcourt.findFirst({
+        where: { ownerId: params.foodcourtId },
+      });
+    }
+
+    if (!foodcourt) {
+      return NextResponse.json(
+        { error: "Foodcourt not found" },
+        { status: 404 },
+      );
+    }
+
+    // Check if menu item exists and belongs to the foodcourt
+    const menuItem = await db.menuItem.findFirst({
+      where: {
+        id: params.menuId,
+        foodcourtId: foodcourt.id,
+      },
+    });
+
+    if (!menuItem) {
+      return NextResponse.json(
+        { error: "Menu item not found" },
+        { status: 404 },
+      );
+    }
+
+    // Check permission
+    const [userPermission, user] = await Promise.all([
+      db.ownerPermission.findUnique({
+        where: {
+          ownerId_foodcourtId: {
+            ownerId: session.user.id,
+            foodcourtId: foodcourt.id,
+          },
+        },
+      }),
+      db.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+      }),
+    ]);
+
+    const isAdmin = user?.role === "ADMIN";
+    const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
+    const hasPermission =
+      !!userPermission?.canEditMenu || foodcourt.ownerId === session.user.id;
+
+    if (
+      !hasPermission &&
+      !isAdmin &&
+      (!isFoodcourtOwner || foodcourt.ownerId !== session.user.id)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "You don't have permission to delete menu items from this foodcourt",
+        },
+        { status: 403 },
+      );
+    }
+
+    // Delete the menu item
+    await db.menuItem.delete({
+      where: {
+        id: params.menuId,
+      },
+    });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  } catch (error) {
+    console.error("Failed to delete menu item:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to delete menu item",
         details: (error as Error).message,
       },
       { status: 500 },

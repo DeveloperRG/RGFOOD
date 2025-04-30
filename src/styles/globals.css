@@ -123,3 +123,26 @@
     @apply bg-background text-foreground;
   }
 }
+/* src/styles/globals.css */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #9333ea #e5e7eb; /* purple-600 and gray-200 */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #e5e7eb; /* Tailwind gray-200 */
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #9333ea; /* Tailwind purple-600 */
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+

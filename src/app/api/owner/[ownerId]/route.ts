@@ -1,9 +1,8 @@
-// /api/owner/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "~/server/auth";
 
-// GET /api/owner/[id] - Get owner profile and their foodcourts
+// GET /api/owner/[id] - Get owner profile and their foodcourt
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
@@ -11,18 +10,29 @@ export async function GET(
   try {
     const session = await auth();
 
-    if (
-      !session?.user ||
-      session.user.id !== params.id ||
-      session.user.role !== "FOODCOURT_OWNER"
-    ) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Allow access to the owner themselves or an admin
+    const isAuthorized =
+      session.user.id === params.id || session.user.role === "ADMIN";
+
+    if (!isAuthorized) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const user = await db.user.findUnique({
       where: { id: params.id },
       include: {
-        ownedFoodcourts: true,
+        ownedFoodcourt: true, // One-to-one relationship (singular)
+        createdFoodcourts: true, // One-to-many relationship
+        permissions: {
+          // Include permissions for foodcourts they have access to
+          include: {
+            foodcourt: true,
+          },
+        },
       },
     });
 
@@ -30,11 +40,17 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    // Remove sensitive information
+    const { password, ...safeUser } = user;
+
+    return NextResponse.json(safeUser);
   } catch (error) {
     console.error("Failed to fetch owner data:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      {
+        error: "Internal Server Error",
+        details: (error as Error).message,
+      },
       { status: 500 },
     );
   }

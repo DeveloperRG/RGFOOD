@@ -19,7 +19,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // First check if foodcourt exists
     const foodcourt = await db.foodcourt.findUnique({
       where: {
         id: foodcourtId,
@@ -35,19 +34,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Get foodcourt categories (food specialties)
+    // Get foodcourt categories according to the actual schema
     const categories = await db.foodcourtCategory.findMany({
       where: {
         foodcourtId: foodcourtId,
       },
       select: {
         id: true,
-        name: true,
-        description: true,
-        displayOrder: true,
+        category: true, // This is the CategoryType enum value
+        createdAt: true,
+        updatedAt: true,
       },
       orderBy: {
-        displayOrder: "asc",
+        createdAt: "asc", // No displayOrder field in the schema
       },
     });
 

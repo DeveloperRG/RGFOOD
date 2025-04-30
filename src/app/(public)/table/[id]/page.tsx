@@ -8,7 +8,15 @@ import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Loader2, Search, X, ArrowRight, ShoppingBag, Tag } from "lucide-react";
+import {
+  Loader2,
+  Search,
+  X,
+  ArrowRight,
+  ShoppingBag,
+  Tag,
+  Clock,
+} from "lucide-react";
 
 interface Foodcourt {
   id: string;
@@ -16,6 +24,7 @@ interface Foodcourt {
   description: string | null;
   logo: string;
   address: string;
+  status: string; // Added status field
   categories?: FoodcourtCategory[]; // Optional categories
 }
 
@@ -227,7 +236,7 @@ export default function TablePage() {
           backgroundPosition: "center",
         }}
       >
-        <div className="flex flex-col items-center justify-center rounded-xl bg-black/10 px-6 py-4 text-white shadow-lg backdrop-blur-sm">
+        <div className="flex flex-col items-center justify-center">
           <span className="text-lg font-medium">
             Table #{tableInfo?.tableNumber || tableId}
           </span>
@@ -248,9 +257,8 @@ export default function TablePage() {
           )}
         </div>
 
-        <p className="text-bold mt-1 text-white">
-          Pesanan Kamu Akan Dikirim ke Sini
-        </p>
+        <p className="text-bold mt-1">Pesanan Kamu Akan Dikirim ke Sini</p>
+
       </div>
       {/* Search - Diletakkan setelah banner */}
       <div className="relative z-10 mx-auto -mt-10 max-w-2xl p-5">
@@ -259,7 +267,8 @@ export default function TablePage() {
             placeholder="lagi mau makan apa?"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="rounded-full bg-gray-100 pl-10"
+            className="bg-gray-200 pl-10 shadow-lg"
+
           />
           <Search className="absolute top-2 right-20 left-3 h-5 w-5 text-gray-400" />
           {searchQuery && (
@@ -274,7 +283,9 @@ export default function TablePage() {
           )}
         </div>
       </div>
-      ){/* Foodcourt List */}
+
+      {/* Foodcourt List */}
+
       <div className="mx-auto max-w-4xl space-y-4 px-4">
         {filteredFoodcourts.length > 0 ? (
           filteredFoodcourts.map((foodcourt) => (
@@ -313,7 +324,20 @@ export default function TablePage() {
                       </div>
                       <div className="flex flex-1 items-center p-4">
                         <div className="flex-1">
-                          <h3 className="font-semibold">{foodcourt.name}</h3>
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold">{foodcourt.name}</h3>
+                            {/* Status Badge */}
+                            <Badge
+                              className={`ml-2 flex items-center ${
+                                foodcourt.status === "BUKA"
+                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                  : "bg-red-100 text-red-800 hover:bg-red-100"
+                              }`}
+                            >
+                              <Clock className="mr-1 h-3 w-3" />
+                              {foodcourt.status === "BUKA" ? "Buka" : "Tutup"}
+                            </Badge>
+                          </div>
                           <p className="mt-1 line-clamp-1 text-sm text-gray-500">
                             {foodcourt.description ||
                               "No description available"}

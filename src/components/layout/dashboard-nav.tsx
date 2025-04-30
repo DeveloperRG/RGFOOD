@@ -67,7 +67,7 @@ export function DashboardNav({ children, user }: DashboardNavProps) {
   if (isAdmin) {
     navigationItems.push(
       {
-        name: "Foodcourts",
+        name: "Stand",
         href: "/admin/foodcourts",
         icon: Store,
         current:
@@ -75,21 +75,21 @@ export function DashboardNav({ children, user }: DashboardNavProps) {
           pathname.startsWith("/admin/foodcourts/"),
       },
       {
-        name: "Owners",
+        name: "Pemilik",
         href: "/admin/owners",
         icon: Users,
         current:
           pathname === "/admin/owners" || pathname.startsWith("/admin/owners/"),
       },
       {
-        name: "Tables",
+        name: "Meja",
         href: "/admin/tables",
         icon: Table,
         current:
           pathname === "/admin/tables" || pathname.startsWith("/admin/tables/"),
       },
       {
-        name: "Reports",
+        name: "Laporan",
         href: "/admin/reports",
         icon: FileText,
         current:
@@ -159,7 +159,7 @@ export function DashboardNav({ children, user }: DashboardNavProps) {
           {/* Logo */}
           <div className="flex h-16 items-center border-b px-6">
             <Link href="/" className="flex items-center text-lg font-bold">
-              <span className="mr-2">🍽️</span> FoodCourt
+              <span className="mr-2">🍽️</span> Stand
             </Link>
           </div>
 
