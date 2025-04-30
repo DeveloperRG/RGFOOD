@@ -36,13 +36,11 @@ interface Foodcourt {
     name: string | null;
     email: string;
   } | null;
-  foodcourtCategories: Array<{
-    id: string;
-    name: string;
-  }>;
+  // Updated to match the API response structure
+  // Since the API doesn't include foodcourtCategories, we'll handle without it
 }
 
-interface PaginationData {
+interface PaginationMeta {
   total: number;
   page: number;
   limit: number;
@@ -55,7 +53,7 @@ export function FoodcourtCardGrid({
 }: FoodcourtCardGridProps) {
   const [foodcourts, setFoodcourts] = useState<Foodcourt[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationData>({
+  const [pagination, setPagination] = useState<PaginationMeta>({
     total: 0,
     page: 1,
     limit: 12,
@@ -73,7 +71,7 @@ export function FoodcourtCardGrid({
       });
 
       if (query) {
-        params.append("search", query);
+        params.append("name", query); // Updated to match API parameter
       }
 
       const response = await fetch(
@@ -85,8 +83,8 @@ export function FoodcourtCardGrid({
       }
 
       const data = await response.json();
-      setFoodcourts(data.foodcourts);
-      setPagination(data.pagination);
+      setFoodcourts(data.data); // Updated to match API response structure
+      setPagination(data.meta); // Updated to match API response structure
     } catch (error) {
       toast.error("Failed to load foodcourts. Please try again.");
     } finally {
@@ -211,26 +209,7 @@ export function FoodcourtCardGrid({
                     </p>
                   </div>
                 )}
-                {foodcourt.foodcourtCategories.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-2">
-                    {foodcourt.foodcourtCategories
-                      .slice(0, 3)
-                      .map((category) => (
-                        <Badge
-                          key={category.id}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          {category.name}
-                        </Badge>
-                      ))}
-                    {foodcourt.foodcourtCategories.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{foodcourt.foodcourtCategories.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                )}
+                {/* Removed the foodcourtCategories section since it's not in the API response */}
               </div>
             </CardContent>
             <CardFooter className="flex justify-between gap-2 p-4">
