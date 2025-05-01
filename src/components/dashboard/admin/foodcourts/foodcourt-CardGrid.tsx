@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Store, Edit, Calendar, ChefHat } from "lucide-react";
+import { Store, Edit, Calendar, ChefHat, Trash } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
@@ -228,13 +228,34 @@ export function FoodcourtCardGrid({
             </div>
           </CardContent>
 
-          <CardFooter className="mt-auto border-t p-3">
+          <CardFooter className="mt-auto space-x-2 border-t p-3">
             <Link href={`/admin/foodcourts/${foodcourt.id}`} className="w-full">
               <Button className="w-full" variant="outline">
                 <Edit className="mr-2 h-4 w-4" />
                 View Details
               </Button>
             </Link>
+
+            <Link
+              href={`/admin/foodcourts/${foodcourt.id}/edit`}
+              className="w-full"
+            >
+              <Button className="w-full" variant="outline">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </Link>
+
+            <form
+              action={`/admin/foodcourts/${foodcourt.id}/delete`}
+              method="POST"
+              className="w-full"
+            >
+              <Button className="w-full" variant="destructive" type="submit">
+                <Trash className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </form>
           </CardFooter>
         </Card>
       ))}
