@@ -1,7 +1,3 @@
-// ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
-
-// ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
-
 import type { Metadata } from "next";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";

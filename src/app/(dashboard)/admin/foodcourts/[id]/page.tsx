@@ -1,5 +1,3 @@
-// ~/src/app/(dashboard)/admin/foodcourts/[id]/page.tsx
-
 "use client";
 
 import { useEffect, useState } from "react";
