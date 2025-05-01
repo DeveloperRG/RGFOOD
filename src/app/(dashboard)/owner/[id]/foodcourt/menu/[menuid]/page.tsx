@@ -1,4 +1,3 @@
-// ~/app/(dashboard)/owner/[id]/foodcourt/menu/[menuId]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -13,7 +12,7 @@ import {
 } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
-import { ArrowLeft, Edit, Trash2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, AlertCircle, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Separator } from "~/components/ui/separator";
@@ -23,7 +22,8 @@ interface MenuItem {
   name: string;
   description: string | null;
   price: number;
-  imageUrl: string | null;
+  image: string | null; // Changed from imageUrl to image to match API
+  imagePublicId: string | null;
   isAvailable: boolean;
   foodcourtId: string;
   categoryId: string | null;
@@ -42,17 +42,23 @@ export default function MenuItemDetailPage() {
     async function fetchMenuItem() {
       try {
         setLoading(true);
+        console.log(`Fetching menu item details for ID: ${params.menuId}`);
+
         const response = await fetch(
           `/api/foodcourt/${params.id}/menu/${params.menuId}`,
         );
 
         if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${await response.text()}`);
+          const errorText = await response.text();
+          console.error(`API error: ${response.status}`, errorText);
+          throw new Error(`Error ${response.status}: ${errorText}`);
         }
 
         const data = await response.json();
+        console.log("Received menu item data:", data.menuItem);
         setMenuItem(data.menuItem);
       } catch (err) {
+        console.error("Error fetching menu item:", err);
         setError(
           err instanceof Error ? err.message : "Failed to fetch menu item",
         );
@@ -130,6 +136,24 @@ export default function MenuItemDetailPage() {
     }
   };
 
+  // Format price function
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Format date function
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8">
@@ -183,15 +207,14 @@ export default function MenuItemDetailPage() {
                 <div>
                   <CardTitle>{menuItem.name}</CardTitle>
                   <CardDescription>
-                    {new Intl.NumberFormat("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                    }).format(menuItem.price)}
+                    {formatPrice(menuItem.price)}
                   </CardDescription>
                 </div>
                 <Badge
                   className={
-                    menuItem.isAvailable ? "bg-green-500" : "bg-red-500"
+                    menuItem.isAvailable
+                      ? "border-green-200 bg-green-100 text-green-800"
+                      : "border-red-200 bg-red-100 text-red-800"
                   }
                 >
                   {menuItem.isAvailable ? "Available" : "Unavailable"}
@@ -199,15 +222,25 @@ export default function MenuItemDetailPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {menuItem.imageUrl && (
-                <div className="mb-4 h-60 w-full overflow-hidden rounded-md">
-                  <Image
-                    src={menuItem.imageUrl}
-                    alt={menuItem.name}
-                    width={600}
-                    height={400}
-                    className="h-full w-full object-cover"
-                  />
+              {menuItem.image ? (
+                <div className="mb-4 overflow-hidden rounded-md">
+                  <div className="relative h-60 w-full">
+                    <Image
+                      src={menuItem.image}
+                      alt={menuItem.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-muted mb-4 flex h-60 w-full items-center justify-center rounded-md">
+                  <div className="text-center">
+                    <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-500">
+                      No image available
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -224,13 +257,13 @@ export default function MenuItemDetailPage() {
                 <div>
                   <h3 className="text-sm font-medium">Created</h3>
                   <p className="text-muted-foreground">
-                    {new Date(menuItem.createdAt).toLocaleDateString()}
+                    {formatDate(menuItem.createdAt)}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium">Last Updated</h3>
                   <p className="text-muted-foreground">
-                    {new Date(menuItem.updatedAt).toLocaleDateString()}
+                    {formatDate(menuItem.updatedAt)}
                   </p>
                 </div>
               </div>

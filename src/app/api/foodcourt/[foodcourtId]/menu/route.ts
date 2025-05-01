@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "~/server/auth";
-import { deleteImage } from "~/lib/cloudinary-utils";
+import { uploadImage } from "~/lib/cloudinary-utils";
 
 // GET /api/foodcourt/[foodcourtId]/menu - List menu items
 export async function GET(
@@ -84,16 +84,36 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const data = await request.json();
-    const {
-      name,
-      description,
-      price,
-      image,
-      imagePublicId,
-      isAvailable,
-      categoryId,
-    } = data;
+    let data;
+    let imageFile;
+    const contentType = request.headers.get("content-type") || "";
+
+    // Handle different content types (JSON or multipart form data)
+    if (contentType.includes("multipart/form-data")) {
+      // Handle multipart form data with image file
+      const formData = await request.formData();
+      console.log("Received form data");
+
+      data = {
+        name: formData.get("name") as string,
+        description: (formData.get("description") as string) || "",
+        price: parseFloat(formData.get("price") as string),
+        isAvailable: formData.get("isAvailable") === "true",
+        categoryId: (formData.get("categoryId") as string) || undefined,
+      };
+
+      imageFile = formData.get("image") as File;
+      console.log("Extracted form data:", {
+        ...data,
+        hasImage: !!imageFile,
+        imageFileName: imageFile?.name,
+      });
+    } else {
+      // Handle JSON data
+      data = await request.json();
+    }
+
+    const { name, description, price, isAvailable, categoryId } = data;
 
     if (!name || !price) {
       return NextResponse.json(
@@ -113,6 +133,7 @@ export async function POST(
 
     // Get foodcourt either from param or by owner ID
     let foodcourt = null;
+
     // Try getting foodcourt from path param (could be foodcourt ID)
     if (params.foodcourtId) {
       foodcourt = await db.foodcourt.findUnique({
@@ -176,20 +197,44 @@ export async function POST(
       );
     }
 
+    // Handle image upload if present
+    let image = null;
+    let imagePublicId = null;
+
+    if (imageFile && imageFile.size > 0) {
+      try {
+        console.log("Processing image upload...");
+        // Convert file to buffer for server-side upload
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        // Upload to Cloudinary
+        const uploadResult = await uploadImage(buffer, "menu-items");
+
+        image = uploadResult.secure_url;
+        imagePublicId = uploadResult.public_id;
+        console.log("Image uploaded successfully:", { image, imagePublicId });
+      } catch (error) {
+        console.error("Image upload failed:", error);
+        // Continue without image if upload fails
+      }
+    }
+
     // Create new menu item
     const menuItem = await db.menuItem.create({
       data: {
         name,
-        description,
+        description: description || "",
         price: priceValue,
         image,
         imagePublicId,
         isAvailable: isAvailable ?? true,
         foodcourtId: foodcourt.id,
-        categoryId,
+        categoryId: categoryId || null,
       },
     });
 
+    console.log("Menu item created:", menuItem);
     return NextResponse.json(menuItem, { status: 201 });
   } catch (error) {
     console.error("Failed to add menu item:", error);

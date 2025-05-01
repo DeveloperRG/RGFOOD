@@ -1,5 +1,4 @@
 // ~/app/(dashboard)/owner/[id]/foodcourt/menu/page.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -45,6 +44,7 @@ import {
   ArrowLeft,
   FilterIcon,
   ChevronDown,
+  ImageIcon,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -53,7 +53,8 @@ interface MenuItem {
   name: string;
   description: string | null;
   price: number;
-  imageUrl: string | null;
+  image: string | null; // Changed from imageUrl to image to match API
+  imagePublicId: string | null;
   isAvailable: boolean;
   foodcourtId: string;
   categoryId: string | null;
@@ -87,6 +88,7 @@ export default function MenuListPage() {
           url += `?${queryParams.toString()}`;
         }
 
+        console.log("Fetching menu items from:", url);
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -94,8 +96,10 @@ export default function MenuListPage() {
         }
 
         const data = await response.json();
+        console.log("Received menu items:", data.menuItems);
         setMenuItems(data.menuItems);
       } catch (err) {
+        console.error("Error fetching menu items:", err);
         setError(
           err instanceof Error ? err.message : "Failed to fetch menu items",
         );
@@ -191,6 +195,15 @@ export default function MenuListPage() {
       (item.description &&
         item.description.toLowerCase().includes(searchQuery.toLowerCase())),
   );
+
+  // Format price function
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
 
   return (
     <div className="container mx-auto py-8">
@@ -326,10 +339,10 @@ export default function MenuListPage() {
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
-                        {item.imageUrl ? (
-                          <div className="h-10 w-10 overflow-hidden rounded-md">
+                        {item.image ? (
+                          <div className="relative h-10 w-10 overflow-hidden rounded-md">
                             <Image
-                              src={item.imageUrl}
+                              src={item.image}
                               alt={item.name}
                               width={40}
                               height={40}
@@ -338,18 +351,13 @@ export default function MenuListPage() {
                           </div>
                         ) : (
                           <div className="bg-muted text-muted-foreground flex h-10 w-10 items-center justify-center rounded-md">
-                            <span className="text-xs">No img</span>
+                            <ImageIcon className="h-5 w-5" />
                           </div>
                         )}
                         <span>{item.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      }).format(item.price)}
-                    </TableCell>
+                    <TableCell>{formatPrice(item.price)}</TableCell>
                     <TableCell className="hidden max-w-xs truncate md:table-cell">
                       {item.description || "-"}
                     </TableCell>

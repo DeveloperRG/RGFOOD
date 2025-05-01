@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "~/server/auth";
-import { deleteImage } from "~/lib/cloudinary-utils";
+import { deleteImage, uploadImage } from "~/lib/cloudinary-utils";
 
 // GET /api/foodcourt/[foodcourtId]/menu/[menuId] - Get menu item detail
 export async function GET(
@@ -79,17 +79,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const data = await request.json();
-    const {
-      name,
-      description,
-      price,
-      image,
-      imagePublicId,
-      isAvailable,
-      categoryId,
-    } = data;
-
     // Get foodcourt either from param or by owner ID
     let foodcourt = null;
     if (params.foodcourtId) {
@@ -157,8 +146,66 @@ export async function PATCH(
     // Get current menu item to check if we need to delete old image
     const currentMenuItem = await db.menuItem.findUnique({
       where: { id: params.menuId },
-      select: { imagePublicId: true },
     });
+
+    if (!currentMenuItem) {
+      return NextResponse.json(
+        { error: "Menu item not found" },
+        { status: 404 },
+      );
+    }
+
+    // Handle different content types (JSON or multipart form data)
+    let data;
+    let imageFile;
+    const contentType = request.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      // Handle multipart form data with image file
+      const formData = await request.formData();
+      console.log("Received form data for menu item update");
+
+      data = {
+        name: formData.get("name") as string,
+        description: (formData.get("description") as string) || "",
+        price: parseFloat(formData.get("price") as string),
+        isAvailable: formData.get("isAvailable") === "true",
+        categoryId: (formData.get("categoryId") as string) || null,
+        image: (formData.get("image") as string) || currentMenuItem.image,
+        imagePublicId:
+          (formData.get("imagePublicId") as string) ||
+          currentMenuItem.imagePublicId,
+      };
+
+      imageFile = formData.get("image") as File;
+
+      // Check if image is a string URL from previous upload or a new File
+      if (imageFile instanceof File) {
+        console.log("New image file detected:", imageFile.name);
+      } else {
+        // If it's a string, it's the original image URL - not a new file
+        imageFile = null;
+      }
+
+      console.log("Extracted form data:", {
+        ...data,
+        hasImage: !!imageFile,
+        imageType: imageFile ? typeof imageFile : "string URL",
+      });
+    } else {
+      // Handle JSON data
+      data = await request.json();
+    }
+
+    const {
+      name,
+      description,
+      price,
+      image,
+      imagePublicId,
+      isAvailable,
+      categoryId,
+    } = data;
 
     // Handle price conversion if it's a string
     let priceValue: number | undefined = undefined;
@@ -172,20 +219,60 @@ export async function PATCH(
       }
     }
 
-    // Check if we need to delete the old image
-    if (
-      currentMenuItem?.imagePublicId &&
-      imagePublicId &&
-      imagePublicId !== currentMenuItem.imagePublicId
-    ) {
+    // Handle image upload if there's a new file
+    let finalImage = currentMenuItem.image;
+    let finalImagePublicId = currentMenuItem.imagePublicId;
+
+    if (imageFile && imageFile instanceof File && imageFile.size > 0) {
       try {
-        await deleteImage(currentMenuItem.imagePublicId);
-        console.log(
-          `Deleted old menu item image: ${currentMenuItem.imagePublicId}`,
-        );
+        console.log("Processing new image upload...");
+        // Convert file to buffer for server-side upload
+        const bytes = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        // Upload to Cloudinary
+        const uploadResult = await uploadImage(buffer, "menu-items");
+
+        finalImage = uploadResult.secure_url;
+        finalImagePublicId = uploadResult.public_id;
+
+        console.log("Image uploaded successfully:", {
+          imageUrl: finalImage,
+          publicId: finalImagePublicId,
+        });
+
+        // Delete old image if it exists
+        if (currentMenuItem.imagePublicId) {
+          try {
+            await deleteImage(currentMenuItem.imagePublicId);
+            console.log(
+              `Deleted old menu item image: ${currentMenuItem.imagePublicId}`,
+            );
+          } catch (deleteError) {
+            console.error("Error deleting old image:", deleteError);
+            // Continue with update even if image deletion fails
+          }
+        }
       } catch (error) {
-        console.error("Error deleting old image:", error);
-        // Continue with update even if image deletion fails
+        console.error("Image upload failed:", error);
+        // Continue with update using existing image
+      }
+    } else if (image === null || image === "") {
+      // If image is explicitly set to null/empty, remove the image
+      finalImage = null;
+
+      // Delete old image if it exists
+      if (currentMenuItem.imagePublicId) {
+        try {
+          await deleteImage(currentMenuItem.imagePublicId);
+          console.log(
+            `Deleted menu item image: ${currentMenuItem.imagePublicId}`,
+          );
+          finalImagePublicId = null;
+        } catch (error) {
+          console.error("Error deleting image:", error);
+          // Continue even if image deletion fails
+        }
       }
     }
 
@@ -199,13 +286,14 @@ export async function PATCH(
         name,
         description,
         price: priceValue,
-        image,
-        imagePublicId,
+        image: finalImage,
+        imagePublicId: finalImagePublicId,
         isAvailable,
         categoryId,
       },
     });
 
+    console.log("Menu item updated successfully:", updatedItem);
     return NextResponse.json(updatedItem, { status: 200 });
   } catch (error) {
     console.error("Failed to update menu item:", error);
