@@ -32,7 +32,7 @@ export async function GET(
       );
     }
 
-    const id = params.id;
+    const { id } = await params;
 
     // Ambil detail foodcourt dengan owner dan creator
     const foodcourt = await db.foodcourt.findUnique({

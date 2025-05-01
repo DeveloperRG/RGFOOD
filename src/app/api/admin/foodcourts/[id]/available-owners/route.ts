@@ -3,7 +3,7 @@ import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { UserRole} from "@prisma/client";
 
-// Handler untuk mendapatkan daftar owner yang tersedia (belum memiliki foodcourt)
+// Handler untuk mendapatkan daftar owner yang belum memiliki foodcourt
 export async function GET(
     req: NextRequest,
     { params }: { params: { id: string } }
@@ -18,7 +18,7 @@ export async function GET(
             );
         }
 
-        const foodcourtId = params.id;
+        const {id : foodcourtId} = params;
 
         // Periksa apakah foodcourt ada
         const existingFoodcourt = await db.foodcourt.findUnique({
@@ -38,13 +38,9 @@ export async function GET(
         const availableOwners = await db.user.findMany({
             where: {
                 role: UserRole.OWNER,
-                AND: [
-                    {
-                        OR: [
-                            { ownedFoodcourt: null }, // Belum memiliki foodcourt
-                            { id: existingFoodcourt.ownerId || '' }, // Adalah owner saat ini
-                        ],
-                    },
+                OR: [
+                    { ownedFoodcourt: null }, // Belum memiliki foodcourt
+                    { id: existingFoodcourt.ownerId || '' }, // Adalah owner saat ini
                 ],
             },
             select: {

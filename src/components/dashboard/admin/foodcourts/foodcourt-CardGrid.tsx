@@ -48,6 +48,7 @@ export function FoodcourtCardGrid({
   const [foodcourts, setFoodcourts] = useState<Foodcourt[]>([]);
   const [filteredFoodcourts, setFilteredFoodcourts] = useState<Foodcourt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchFoodcourts() {
@@ -108,6 +109,76 @@ export function FoodcourtCardGrid({
       month: "short",
       year: "numeric",
     });
+  };
+
+  // Handle delete foodcourt
+  const handleDeleteFoodcourt = async (id: string) => {
+    // Find the foodcourt name for the confirmation message
+    const foodcourt = foodcourts.find(fc => fc.id === id);
+
+    // Use toast for confirmation instead of browser confirm
+    toast.warning(
+      `Are you sure you want to delete "${foodcourt?.name || 'this foodcourt'}"?`,
+      {
+        duration: 10000, // 10 seconds
+        action: {
+          label: "Delete",
+          onClick: () => performDelete(id),
+        },
+        cancel: {
+          label: "Cancel",
+          onClick: () => {/* Do nothing, just close the toast */}
+        },
+      }
+    );
+  };
+
+  // Actual delete operation
+  const performDelete = async (id: string) => {
+    setDeletingId(id);
+
+    try {
+      const response = await fetch(`/api/admin/foodcourts/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Update state to remove the deleted foodcourt
+        setFoodcourts((prevFoodcourts) => 
+          prevFoodcourts.filter((foodcourt) => foodcourt.id !== id)
+        );
+        toast.success("Foodcourt deleted successfully");
+        router.refresh(); // Refresh the page to update any other components
+      } else {
+        // Handle specific error cases
+        if (response.status === 400) {
+          if (data.hasMenuItems) {
+            toast.error("Cannot delete foodcourt with existing menu items");
+          } else if (data.hasOrderItems) {
+            toast.error("Cannot delete foodcourt with existing orders");
+          } else {
+            toast.error(data.error || "Failed to delete foodcourt");
+          }
+        } else if (response.status === 403) {
+          toast.error("You don't have permission to delete this foodcourt");
+        } else if (response.status === 404) {
+          toast.error("Foodcourt not found");
+          // Remove from state anyway since it doesn't exist
+          setFoodcourts((prevFoodcourts) => 
+            prevFoodcourts.filter((foodcourt) => foodcourt.id !== id)
+          );
+        } else {
+          toast.error(data.error || "Failed to delete foodcourt");
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting foodcourt:", error);
+      toast.error("An error occurred while deleting the foodcourt");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (loading) {
@@ -228,34 +299,47 @@ export function FoodcourtCardGrid({
             </div>
           </CardContent>
 
-          <CardFooter className="mt-auto space-x-2 border-t p-3">
-            <Link href={`/admin/foodcourts/${foodcourt.id}`} className="w-full">
-              <Button className="w-full" variant="outline">
-                <Edit className="mr-2 h-4 w-4" />
-                View Details
-              </Button>
-            </Link>
+          <CardFooter className="mt-auto flex flex-col gap-2 border-t p-3">
+            <div className="flex w-full gap-2">
+              <Link href={`/admin/foodcourts/${foodcourt.id}`} className="w-1/2">
+                <Button className="w-full" variant="outline">
+                  <Edit className="mr-2 h-4 w-4" />
+                  View Details
+                </Button>
+              </Link>
 
-            <Link
-              href={`/admin/foodcourts/${foodcourt.id}/edit`}
-              className="w-full"
-            >
-              <Button className="w-full" variant="outline">
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            </Link>
+              <Link
+                href={`/admin/foodcourts/${foodcourt.id}/edit`}
+                className="w-1/2"
+              >
+                <Button className="w-full" variant="outline">
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              </Link>
+            </div>
 
-            <form
-              action={`/admin/foodcourts/${foodcourt.id}/delete`}
-              method="POST"
-              className="w-full"
+            <Button 
+              className="w-full transition-all duration-200 hover:bg-red-600 focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 shadow-sm" 
+              variant="destructive" 
+              onClick={() => handleDeleteFoodcourt(foodcourt.id)}
+              disabled={deletingId === foodcourt.id}
             >
-              <Button className="w-full" variant="destructive" type="submit">
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            </form>
+              {deletingId === foodcourt.id ? (
+                <>
+                  <svg className="mr-2 h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete Foodcourt
+                </>
+              )}
+            </Button>
           </CardFooter>
         </Card>
       ))}
