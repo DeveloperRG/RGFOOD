@@ -54,7 +54,7 @@ export default async function OwnerDetailsPage({ params }: OwnerDetailsPageProps
         },
     });
 
-    if (!owner || owner.role !== "FOODCOURT_OWNER") {
+    if (!owner || owner.role !== "OWNER") {
         notFound();
     }
 

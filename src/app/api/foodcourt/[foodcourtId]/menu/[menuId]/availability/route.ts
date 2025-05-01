@@ -74,7 +74,7 @@ export async function PATCH(
     ]);
 
     const isAdmin = user?.role === "ADMIN";
-    const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
+    const isFoodcourtOwner = user?.role === "OWNER";
     const hasPermission =
       !!userPermission?.canEditMenu || foodcourt.ownerId === session.user.id;
 

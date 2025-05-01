@@ -29,7 +29,7 @@ export default async function EditPermissionsPage({ params }: EditPermissionsPag
         },
     });
 
-    if (!owner || owner.role !== "FOODCOURT_OWNER") {
+    if (!owner || owner.role !== "OWNER") {
         notFound();
     }
 

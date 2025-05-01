@@ -54,6 +54,7 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
+  imagePublicId String?
   password      String?
   role          UserRole  @default(CUSTOMER)
   createdAt     DateTime  @default(now())
@@ -62,8 +63,8 @@ model User {
 
   accounts          Account[]
   sessions          Session[]
-  ownedFoodcourt    Foodcourt?       @relation("FoodcourtOwner") // Changed to optional single relation
-  createdFoodcourts Foodcourt[]       @relation("FoodcourtCreator")
+  ownedFoodcourt    Foodcourt?       @relation("FoodcourtOwner")
+  createdFoodcourts Foodcourt[]      @relation("FoodcourtCreator")
   permissions       OwnerPermission[]
   updatedLogs       OrderLog[]
 
@@ -75,13 +76,14 @@ model Foodcourt {
   name        String
   description String?
   address     String
-  logo        String?
+  image       String?
+  imagePublicId String?
   isActive    Boolean  @default(true)
   status      FoodcourtStatus @default(BUKA)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  ownerId   String?  // Can remain optional
+  ownerId   String?
   owner     User?    @relation("FoodcourtOwner", fields: [ownerId], references: [id])
   creatorId String
   creator   User     @relation("FoodcourtCreator", fields: [creatorId], references: [id])
@@ -93,12 +95,12 @@ model Foodcourt {
   ownerPermissions   OwnerPermission[]
 
   @@map("foodcourts")
-  @@unique([ownerId]) // This ensures each owner can only be associated with one foodcourt
+  @@unique([ownerId])
 }
 
 model FoodcourtCategory {
   id           String       @id @default(cuid())
-  category         CategoryType
+  category     CategoryType
   foodcourtId  String
   foodcourt    Foodcourt    @relation(fields: [foodcourtId], references: [id])
   createdAt    DateTime     @default(now())
@@ -107,7 +109,6 @@ model FoodcourtCategory {
   @@unique([foodcourtId, category])
   @@map("foodcourt_categories")
 }
-
 
 model Table {
   id            String         @id @default(cuid())
@@ -135,18 +136,19 @@ model TableSession {
 }
 
 model MenuItem {
-  id          String        @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal       @db.Decimal(10, 2)
-  imageUrl    String?
-  isAvailable Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  foodcourtId String
-  categoryId  String?
-  foodcourt   Foodcourt     @relation(fields: [foodcourtId], references: [id])
-  orderItems  OrderItem[]
+  id            String        @id @default(cuid())
+  name          String
+  description   String?
+  price         Decimal       @db.Decimal(10, 2)
+  image         String?
+  imagePublicId String?
+  isAvailable   Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  foodcourtId   String
+  categoryId    String?
+  foodcourt     Foodcourt     @relation(fields: [foodcourtId], references: [id])
+  orderItems    OrderItem[]
 
   @@map("menu_items")
 }
@@ -243,7 +245,7 @@ model OwnerNotification {
 
 enum UserRole {
   CUSTOMER
-  FOODCOURT_OWNER
+  OWNER
   ADMIN
 }
 

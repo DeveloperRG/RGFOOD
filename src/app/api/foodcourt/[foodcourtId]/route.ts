@@ -3,13 +3,15 @@ import { db } from "~/server/db";
 import { auth } from "~/server/auth";
 import { FoodcourtStatus } from "@prisma/client";
 import { z } from "zod";
+import { deleteImage, uploadImage } from "~/lib/cloudinary-utils";
 
 // Schema for validation
 const foodcourtUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().nullish(),
   address: z.string().min(1).optional(),
-  logo: z.string().nullish(),
+  image: z.string().nullish(),
+  imagePublicId: z.string().nullish(),
   isActive: z.boolean().optional(),
 });
 
@@ -147,19 +149,120 @@ export async function PUT(
       );
     }
 
-    const body = await req.json();
-    const validatedData = foodcourtUpdateSchema.safeParse(body);
+    // Handle different content types
+    let updateData: any = {};
+    let imagePublicId: string | null = null;
+    let imageUrl: string | null = null;
 
-    if (!validatedData.success) {
-      return NextResponse.json(
-        { error: validatedData.error.format() },
-        { status: 400 },
-      );
+    const contentType = req.headers.get("content-type") || "";
+
+    // Check if the request is FormData (from frontend image upload)
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+
+      // Extract text fields
+      if (formData.has("name"))
+        updateData.name = formData.get("name") as string;
+      if (formData.has("description"))
+        updateData.description = formData.get("description") as string;
+      if (formData.has("address"))
+        updateData.address = formData.get("address") as string;
+
+      // Handle image upload if there's a file
+      const imageFile = formData.get("image") as File | null;
+
+      if (imageFile && imageFile.size > 0) {
+        try {
+          // Get current image to potentially delete
+          const currentFoodcourt = await db.foodcourt.findUnique({
+            where: { id: foodcourtId },
+            select: { imagePublicId: true },
+          });
+
+          // Upload the new image
+          const arrayBuffer = await imageFile.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const uploadResult = await uploadImage(buffer, "foodcourts");
+          imageUrl = uploadResult.secure_url;
+          imagePublicId = uploadResult.public_id;
+
+          // Add to update data
+          updateData.image = imageUrl;
+          updateData.imagePublicId = imagePublicId;
+
+          // Delete old image if it exists
+          if (currentFoodcourt?.imagePublicId) {
+            try {
+              await deleteImage(currentFoodcourt.imagePublicId);
+              console.log(
+                `Deleted old foodcourt image: ${currentFoodcourt.imagePublicId}`,
+              );
+            } catch (error) {
+              console.error("Error deleting old image:", error);
+              // Continue with update even if image deletion fails
+            }
+          }
+        } catch (uploadError) {
+          console.error("Error uploading image:", uploadError);
+          return NextResponse.json(
+            { error: "Failed to upload image" },
+            { status: 500 },
+          );
+        }
+      }
+    } else {
+      // It's JSON data
+      try {
+        const body = await req.json();
+        const validatedData = foodcourtUpdateSchema.safeParse(body);
+
+        if (!validatedData.success) {
+          return NextResponse.json(
+            { error: validatedData.error.format() },
+            { status: 400 },
+          );
+        }
+
+        updateData = validatedData.data;
+
+        // Check if image is being updated via JSON
+        if (updateData.imagePublicId !== undefined) {
+          // Get current image to potentially delete
+          const currentFoodcourt = await db.foodcourt.findUnique({
+            where: { id: foodcourtId },
+            select: { imagePublicId: true },
+          });
+
+          // If there's a new image and there was an old image, delete the old one
+          if (
+            currentFoodcourt?.imagePublicId &&
+            updateData.imagePublicId !== currentFoodcourt.imagePublicId &&
+            updateData.imagePublicId !== null
+          ) {
+            try {
+              await deleteImage(currentFoodcourt.imagePublicId);
+              console.log(
+                `Deleted old foodcourt image: ${currentFoodcourt.imagePublicId}`,
+              );
+            } catch (error) {
+              console.error("Error deleting old image:", error);
+              // Continue with update even if image deletion fails
+            }
+          }
+        }
+      } catch (jsonError) {
+        console.error("Error parsing JSON:", jsonError);
+        return NextResponse.json(
+          { error: "Invalid JSON in request body" },
+          { status: 400 },
+        );
+      }
     }
 
+    // Update the foodcourt with the collected data
     const updatedFoodcourt = await db.foodcourt.update({
       where: { id: foodcourtId },
-      data: validatedData.data,
+      data: updateData,
     });
 
     return NextResponse.json(updatedFoodcourt);

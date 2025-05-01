@@ -60,14 +60,14 @@ export async function PUT(
 
         const { ownerId } = validatedData.data;
 
-        // Periksa apakah owner valid dan memiliki role FOODCOURT_OWNER
+        // Periksa apakah owner valid dan memiliki role OWNER
         const owner = await db.user.findUnique({
-            where: { id: ownerId, role: UserRole.FOODCOURT_OWNER },
+            where: { id: ownerId, role: UserRole.OWNER },
         });
 
         if (!owner) {
             return NextResponse.json(
-                { error: 'Invalid owner or owner is not a FOODCOURT_OWNER' },
+                { error: 'Invalid owner or owner is not a OWNER' },
                 { status: 400 }
             );
         }

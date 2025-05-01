@@ -171,7 +171,7 @@ export default async function OwnersPage() {
   const owners = (
     await db.user.findMany({
       where: {
-        role: "FOODCOURT_OWNER",
+        role: "OWNER",
       },
       select: {
         id: true,

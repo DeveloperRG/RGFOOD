@@ -89,7 +89,7 @@ function getRedirectUrlByRole(role: UserRole): string {
   switch (role) {
     case UserRole.ADMIN:
       return "/admin";
-    case UserRole.FOODCOURT_OWNER:
+    case UserRole.OWNER:
       return "/owner";
     case UserRole.CUSTOMER:
     default:

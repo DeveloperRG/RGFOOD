@@ -31,7 +31,7 @@ export default async function OwnerDashboardPage({
 
   // Check if viewing own profile or admin viewing owner's profile
   const isAdmin = session.user.role === UserRole.ADMIN;
-  const isOwner = session.user.role === UserRole.FOODCOURT_OWNER;
+  const isOwner = session.user.role === UserRole.OWNER;
 
   // If not admin and not the owner being viewed, redirect
   if (!isAdmin && isOwner && session.user.id !== params.id) {
@@ -42,7 +42,7 @@ export default async function OwnerDashboardPage({
   const ownerData = await db.user.findUnique({
     where: {
       id: params.id,
-      role: "FOODCOURT_OWNER", // Use string literal instead of enum for Prisma
+      role: "OWNER", // Use string literal instead of enum for Prisma
     },
     include: {
       ownedFoodcourt: true, // Changed from ownedFoodcourts to ownedFoodcourt
@@ -60,7 +60,7 @@ export default async function OwnerDashboardPage({
     email: ownerData.email,
     username: ownerData.username,
     image: ownerData.image,
-    role: UserRole.FOODCOURT_OWNER,
+    role: UserRole.OWNER,
     foodcourts: ownerData.ownedFoodcourt
       ? [
           {
@@ -68,7 +68,8 @@ export default async function OwnerDashboardPage({
             name: ownerData.ownedFoodcourt.name,
             description: ownerData.ownedFoodcourt.description,
             address: ownerData.ownedFoodcourt.address,
-            logo: ownerData.ownedFoodcourt.logo,
+          image: ownerData.ownedFoodcourt.image,
+            imagePublicId: ownerData.ownedFoodcourt.imagePublicId,
             isActive: ownerData.ownedFoodcourt.isActive,
             createdAt: ownerData.ownedFoodcourt.createdAt,
             updatedAt: ownerData.ownedFoodcourt.updatedAt,
@@ -178,7 +179,8 @@ export default async function OwnerDashboardPage({
         name: item.menuItem.name,
         description: item.menuItem.description,
         price: Number(item.menuItem.price),
-        imageUrl: item.menuItem.imageUrl,
+        image: item.menuItem.image,
+        imagePublicId: item.menuItem.imagePublicId,
         isAvailable: item.menuItem.isAvailable,
         foodcourtId: item.menuItem.foodcourtId,
         categoryId: item.menuItem.categoryId,

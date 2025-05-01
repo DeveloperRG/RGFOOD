@@ -1,16 +1,13 @@
 // ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
 
-// ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
+"use client";
 
-import type { Metadata } from "next";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { redirect } from "next/navigation";
-import { auth } from "~/server/auth";
-import { db } from "~/server/db";
-import { UserRole } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import {
   Card,
@@ -23,78 +20,92 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { ImageUpload } from "~/components/ui/image-upload";
 
-export const metadata: Metadata = {
-  title: "Add New Foodcourt",
-  description: "Add a new foodcourt to the system",
-};
+// Type definition for owner
+interface Owner {
+  id: string;
+  name: string | null;
+  email: string | null;
+}
 
-export default async function NewFoodcourtPage() {
-  const session = await auth();
+// Page props interface to receive owners data
+interface NewFoodcourtPageProps {
+  potentialOwners: Owner[];
+}
 
-  // Redirect if not logged in or not an admin
-  if (!session?.user || session.user.role !== UserRole.ADMIN) {
-    redirect("/login");
-  }
-
-  // Fetch all users with FOODCOURT_OWNER role who don't already have a foodcourt
-  const potentialOwners = await db.user.findMany({
-    where: {
-      role: UserRole.FOODCOURT_OWNER,
-      // Find users who don't have any foodcourts where they are the owner
-      NOT: {
-        ownedFoodcourt: {
-        }
-      }
-    },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-    },
-    orderBy: {
-      name: "asc",
-    },
+export default function NewFoodcourtPage({ potentialOwners = [] }: NewFoodcourtPageProps) {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    address: "",
+    ownerId: "",
+    isActive: true,
   });
+  const [image, setImage] = useState<File | null>(null);
 
-  async function createFoodcourt(formData: FormData) {
-    "use server";
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    const name = formData.get("name") as string;
-    const description = (formData.get("description") as string) || null;
-    const address = formData.get("address") as string;
-    const ownerId = (formData.get("ownerId") as string) || null;
-    const isActive = formData.get("isActive") === "on";
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormData(prev => ({ ...prev, isActive: checked }));
+  };
 
-    // Get current user for creator reference
-    const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error("Not authenticated");
+  const handleImageChange = (file: File | null) => {
+    setImage(file);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Create form data for multipart/form-data submission
+      const submitData = new FormData();
+      submitData.append("name", formData.name);
+      submitData.append("description", formData.description || "");
+      submitData.append("address", formData.address);
+      submitData.append("ownerId", formData.ownerId || "");
+      submitData.append("isActive", formData.isActive ? "true" : "false");
+      
+      // Add image if selected
+      if (image) {
+        submitData.append("image", image);
+      }
+
+      // Submit to API endpoint
+      const response = await fetch("/api/admin/foodcourts", {
+        method: "POST",
+        body: submitData,
+        // No Content-Type header needed as fetch will set it automatically for FormData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create foodcourt");
+      }
+
+      // Success handling
+      toast.success(
+         "Foodcourt created successfully"
+      );
+      
+      // Redirect to foodcourts list
+      router.push("/admin/foodcourts");
+      router.refresh(); // Refresh the page data
+    } catch (error) {
+      console.error("Error creating foodcourt:", error);
+      toast.error(
+        "Failed to create foodcourt",
+        );
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // Create the foodcourt
-    await db.foodcourt.create({
-      data: {
-        name,
-        description,
-        address,
-        isActive,
-        ownerId: ownerId || null,
-        creatorId: session.user.id,
-      },
-    });
-
-    // Redirect back to foodcourts list
-    revalidatePath("/admin/foodcourts");
-    redirect("/admin/foodcourts");
-  }
+  };
 
   return (
     <div className="container mx-auto py-0">
@@ -122,13 +133,15 @@ export default async function NewFoodcourtPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={createFoodcourt} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
                   name="name"
+                  value={formData.name}
+                  onChange={handleChange}
                   placeholder="Enter foodcourt name"
                   required
                 />
@@ -139,6 +152,8 @@ export default async function NewFoodcourtPage() {
                 <Textarea
                   id="description"
                   name="description"
+                  value={formData.description}
+                  onChange={handleChange}
                   placeholder="Enter description"
                   rows={3}
                 />
@@ -149,16 +164,28 @@ export default async function NewFoodcourtPage() {
                 <Input
                   id="address"
                   name="address"
+                  value={formData.address}
+                  onChange={handleChange}
                   placeholder="Enter address"
                   required
                 />
               </div>
+
+              <ImageUpload
+                id="image"
+                name="image"
+                label="Foodcourt Image"
+                description="Upload a logo or image for the foodcourt (recommended size: 500x500px)"
+                onChange={handleImageChange}
+              />
 
               <div className="grid gap-3">
                 <Label htmlFor="ownerId">Owner</Label>
                 <select
                   id="ownerId"
                   name="ownerId"
+                  value={formData.ownerId}
+                  onChange={handleChange}
                   className="border-input bg-background ring-offset-background focus:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
                 >
                   <option value="">Select an owner</option>
@@ -169,8 +196,9 @@ export default async function NewFoodcourtPage() {
                   ))}
                 </select>
                 {potentialOwners.length === 0 && (
-                  <p className="text-yellow-600 text-sm">
-                    No available owners found. All foodcourt owners already have a foodcourt assigned.
+                  <p className="text-sm text-yellow-600">
+                    No available owners found. All foodcourt owners already have
+                    a foodcourt assigned.
                   </p>
                 )}
                 <p className="text-muted-foreground text-sm">
@@ -179,13 +207,29 @@ export default async function NewFoodcourtPage() {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Checkbox id="isActive" name="isActive" defaultChecked />
+                <Checkbox 
+                  id="isActive" 
+                  name="isActive" 
+                  checked={formData.isActive}
+                  onCheckedChange={handleCheckboxChange}
+                />
                 <Label htmlFor="isActive">Active</Label>
               </div>
 
               <div>
-                <Button type="submit" className="w-full md:w-auto">
-                  Create Foodcourt
+                <Button 
+                  type="submit" 
+                  className="w-full md:w-auto"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Foodcourt"
+                  )}
                 </Button>
               </div>
             </div>

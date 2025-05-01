@@ -49,7 +49,7 @@ export function DashboardNav({ children, user }: DashboardNavProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const isAdmin = user?.role === UserRole.ADMIN;
-  const isOwner = user?.role === UserRole.FOODCOURT_OWNER;
+  const isOwner = user?.role === UserRole.OWNER;
   const userId = user?.id || "";
 
   // Define navigation items based on user role

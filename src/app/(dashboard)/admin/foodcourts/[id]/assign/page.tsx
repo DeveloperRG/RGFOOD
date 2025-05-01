@@ -65,7 +65,7 @@ export default async function AssignOwnerPage({ params }: AssignOwnerPageProps) 
   }
 
   const users = await db.user.findMany({
-    where: { role: UserRole.FOODCOURT_OWNER },
+    where: { role: UserRole.OWNER },
     select: { id: true, name: true, email: true },
   });
 

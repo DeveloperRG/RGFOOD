@@ -655,7 +655,7 @@ export interface Database {
     };
 
     Enums: {
-      UserRole: "CUSTOMER" | "FOODCOURT_OWNER" | "ADMIN";
+      UserRole: "CUSTOMER" | "OWNER" | "ADMIN";
       OrderStatus:
         | "WAITING_FOR_CONFIRMATION"
         | "FOOD_BEING_MADE"
