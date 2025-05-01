@@ -11,6 +11,7 @@ const updateFoodcourtSchema = z.object({
     address: z.string().min(1, 'Alamat harus diisi').optional(),
     logo: z.string().optional().nullable(),
     isActive: z.boolean().optional(),
+    ownerId: z.string().optional().nullable(),
 });
 
 // Handler untuk mendapatkan detail foodcourt
