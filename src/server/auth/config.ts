@@ -24,7 +24,7 @@ declare module "next-auth" {
 
 export enum UserRole {
   CUSTOMER = "CUSTOMER",
-  FOODCOURT_OWNER = "FOODCOURT_OWNER",
+  OWNER = "OWNER",
   ADMIN = "ADMIN",
 }
 
@@ -39,8 +39,8 @@ export const authConfig = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          role: UserRole.FOODCOURT_OWNER, // Default role for OAuth users
-          emailVerified: new Date(), // OAuth providers verify emails
+          role: UserRole.OWNER,
+          emailVerified: new Date(),
         };
       },
     }),
@@ -63,12 +63,11 @@ export const authConfig = {
           return null;
         }
 
-        // Check if email is verified
         if (!user.emailVerified) {
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        // Fix the type issue by ensuring both arguments are strings
+       
         const isPasswordValid = await compare(
           credentials.password as string,
           user.password,

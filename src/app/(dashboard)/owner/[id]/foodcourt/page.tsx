@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -14,10 +15,10 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Switch } from "~/components/ui/switch";
 import { Label } from "~/components/ui/label";
+import { ImageUpload } from "~/components/ui/image-upload";
 import { FoodcourtStatus } from "@prisma/client";
-import { ArrowLeft, Save, AlertCircle, Edit, X } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, Edit, X, Store } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { toast } from "sonner";
 
@@ -26,7 +27,8 @@ interface FoodcourtData {
   name: string;
   description: string | null;
   address: string;
-  logo: string | null;
+  image: string | null;
+  imagePublicId: string | null;
   isActive: boolean;
   status: FoodcourtStatus;
   createdAt: string;
@@ -61,6 +63,7 @@ export default function FoodcourtPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     // Fetch foodcourt data using owner ID
@@ -105,19 +108,41 @@ export default function FoodcourtPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Handle image file selection
+  const handleImageChange = (file: File | null) => {
+    setImageFile(file);
+  };
+
+  // Updated section of updateFoodcourtDetails function
+
   const updateFoodcourtDetails = async () => {
     try {
       setSaving(true);
+
+      // Create FormData object to handle the image upload
+      const formDataToSend = new FormData();
+
+      // Add text fields
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("description", formData.description || "");
+      formDataToSend.append("address", formData.address);
+
+      // Add image if we have a new one
+      if (imageFile) {
+        formDataToSend.append("image", imageFile);
+      }
+
+      // Send the request with FormData
       const response = await fetch(`/api/foodcourt/${params.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        body: formDataToSend,
+        // Important: Do NOT set Content-Type header when sending FormData
+        // The browser will automatically set it with the correct boundary
       });
 
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${await response.text()}`);
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       const updatedFoodcourt = await response.json();
@@ -126,6 +151,7 @@ export default function FoodcourtPage() {
       );
       toast.success("Foodcourt details updated successfully");
       setIsEditing(false);
+      setImageFile(null);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Failed to update foodcourt",
@@ -174,6 +200,7 @@ export default function FoodcourtPage() {
       });
     }
     setIsEditing(false);
+    setImageFile(null);
   };
 
   if (loading) {
@@ -238,6 +265,39 @@ export default function FoodcourtPage() {
               ) : null}
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Foodcourt Image */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Foodcourt Image</h3>
+                {!isEditing ? (
+                  <div className="relative h-48 w-full max-w-md overflow-hidden rounded-md border">
+                    {foodcourt.image ? (
+                      <Image
+                        src={foodcourt.image}
+                        alt={foodcourt.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 400px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="bg-muted/20 flex h-full w-full items-center justify-center">
+                        <Store className="text-muted-foreground h-16 w-16" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative max-w-md">
+                    <ImageUpload
+                      id="image"
+                      name="image"
+                      label="Foodcourt Image"
+                      description="Upload a logo or image for the foodcourt (recommended size: 500x500px)"
+                      defaultImage={foodcourt.image || undefined}
+                      onChange={handleImageChange}
+                    />
+                  </div>
+                )}
+              </div>
+
               {!isEditing ? (
                 // View mode - Display information
                 <>
@@ -255,7 +315,6 @@ export default function FoodcourtPage() {
                     <h3 className="text-sm font-medium">Address</h3>
                     <p>{foodcourt.address}</p>
                   </div>
-                  {/* Removed the Administrative Status from here since it's now shown in the info card */}
                 </>
               ) : (
                 // Edit mode - Show form inputs

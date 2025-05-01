@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "~/server/auth";
+import { deleteImage } from "~/lib/cloudinary-utils";
 
 // GET /api/foodcourt/[foodcourtId]/menu/[menuId] - Get menu item detail
 export async function GET(
@@ -79,8 +80,15 @@ export async function PATCH(
     }
 
     const data = await request.json();
-    const { name, description, price, imageUrl, isAvailable, categoryId } =
-      data;
+    const {
+      name,
+      description,
+      price,
+      image,
+      imagePublicId,
+      isAvailable,
+      categoryId,
+    } = data;
 
     // Get foodcourt either from param or by owner ID
     let foodcourt = null;
@@ -128,7 +136,7 @@ export async function PATCH(
     ]);
 
     const isAdmin = user?.role === "ADMIN";
-    const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
+    const isFoodcourtOwner = user?.role === "OWNER";
     const hasPermission =
       !!userPermission?.canEditMenu || foodcourt.ownerId === session.user.id;
 
@@ -146,6 +154,12 @@ export async function PATCH(
       );
     }
 
+    // Get current menu item to check if we need to delete old image
+    const currentMenuItem = await db.menuItem.findUnique({
+      where: { id: params.menuId },
+      select: { imagePublicId: true },
+    });
+
     // Handle price conversion if it's a string
     let priceValue: number | undefined = undefined;
     if (price !== undefined) {
@@ -155,6 +169,23 @@ export async function PATCH(
           { error: "Invalid price format" },
           { status: 400 },
         );
+      }
+    }
+
+    // Check if we need to delete the old image
+    if (
+      currentMenuItem?.imagePublicId &&
+      imagePublicId &&
+      imagePublicId !== currentMenuItem.imagePublicId
+    ) {
+      try {
+        await deleteImage(currentMenuItem.imagePublicId);
+        console.log(
+          `Deleted old menu item image: ${currentMenuItem.imagePublicId}`,
+        );
+      } catch (error) {
+        console.error("Error deleting old image:", error);
+        // Continue with update even if image deletion fails
       }
     }
 
@@ -168,7 +199,8 @@ export async function PATCH(
         name,
         description,
         price: priceValue,
-        imageUrl,
+        image,
+        imagePublicId,
         isAvailable,
         categoryId,
       },
@@ -253,7 +285,7 @@ export async function DELETE(
     ]);
 
     const isAdmin = user?.role === "ADMIN";
-    const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
+    const isFoodcourtOwner = user?.role === "OWNER";
     const hasPermission =
       !!userPermission?.canEditMenu || foodcourt.ownerId === session.user.id;
 
@@ -269,6 +301,17 @@ export async function DELETE(
         },
         { status: 403 },
       );
+    }
+
+    // Delete image from Cloudinary if it exists
+    if (menuItem.imagePublicId) {
+      try {
+        await deleteImage(menuItem.imagePublicId);
+        console.log(`Deleted menu item image: ${menuItem.imagePublicId}`);
+      } catch (error) {
+        console.error("Error deleting image:", error);
+        // Continue with deletion even if image deletion fails
+      }
     }
 
     // Delete the menu item

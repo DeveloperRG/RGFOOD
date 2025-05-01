@@ -33,11 +33,11 @@ export async function GET(
             );
         }
 
-        // Cari user dengan role FOODCOURT_OWNER yang belum memiliki foodcourt
+        // Cari user dengan role OWNER yang belum memiliki foodcourt
         // atau yang saat ini adalah pemilik dari foodcourt ini
         const availableOwners = await db.user.findMany({
             where: {
-                role: UserRole.FOODCOURT_OWNER,
+                role: UserRole.OWNER,
                 AND: [
                     {
                         OR: [

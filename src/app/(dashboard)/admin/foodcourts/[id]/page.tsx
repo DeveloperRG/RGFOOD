@@ -1,10 +1,12 @@
+// ~/src/app/(dashboard)/admin/foodcourts/[id]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, Edit, UserPlus } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Edit, UserPlus, Store } from "lucide-react";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { toast } from "sonner";
@@ -43,8 +45,10 @@ interface Foodcourt {
   name: string;
   address: string;
   description: string | null;
-  logo: string | null;
+  image: string | null;
+  imagePublicId: string | null;
   isActive: boolean;
+  status: "BUKA" | "TUTUP";
   createdAt: string;
   updatedAt: string;
   ownerId: string | null;
@@ -91,7 +95,7 @@ export default function FoodcourtDetailsPage() {
     if (foodcourtId) {
       fetchFoodcourt();
     }
-  }, [foodcourtId, router, toast]);
+  }, [foodcourtId, router]);
 
   // Display loading state
   if (loading) {
@@ -177,6 +181,24 @@ export default function FoodcourtDetailsPage() {
   const hasRealOwner =
     !!foodcourt.owner && foodcourt.owner.email !== "system@foodcourt.internal";
 
+  // Format price function
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Format date function
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
   return (
     <div className="container mx-auto py-0">
       <div className="mb-6">
@@ -191,30 +213,18 @@ export default function FoodcourtDetailsPage() {
       <div className="mb-6 flex items-center justify-between">
         {/* Kiri: Logo dan info */}
         <div className="flex items-center gap-4">
-          {/* Logo */}
-          <div className="bg-muted/20 h-16 w-16 overflow-hidden rounded-md border">
-            {foodcourt.logo ? (
-              <img
-                src={foodcourt.logo}
-                alt={`${foodcourt.name} logo`}
-                className="h-full w-full object-cover"
+          {/* Logo/Image */}
+          <div className="relative h-16 w-16 overflow-hidden rounded-md border">
+            {foodcourt.image ? (
+              <Image
+                src={foodcourt.image}
+                alt={`${foodcourt.name} image`}
+                fill
+                className="object-cover"
               />
             ) : (
-              <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-                <svg
-                  xmlns="https://www.pexels.com/photo/flat-lay-photography-of-vegetable-salad-on-plate-1640777" 
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21 11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8"></path>
-                  <rect x="8" y="8" width="8" height="8" rx="1"></rect>
-                </svg>
+              <div className="bg-muted/20 text-muted-foreground flex h-full w-full items-center justify-center">
+                <Store className="h-8 w-8" />
               </div>
             )}
           </div>
@@ -234,6 +244,16 @@ export default function FoodcourtDetailsPage() {
                 }
               >
                 {foodcourt.isActive ? "Active" : "Inactive"}
+              </Badge>
+              <Badge
+                variant={foodcourt.status === "BUKA" ? "default" : "secondary"}
+                className={
+                  foodcourt.status === "BUKA"
+                    ? "border-green-150 bg-green-100 text-green-700"
+                    : "border-orange-150 bg-orange-100 text-orange-700"
+                }
+              >
+                {foodcourt.status === "BUKA" ? "Open" : "Closed"}
               </Badge>
               {hasRealOwner && (
                 <Badge variant="outline">
@@ -264,7 +284,7 @@ export default function FoodcourtDetailsPage() {
       </div>
 
       {/* FoodcourtDetails component integrated directly */}
-      <div className="grid gap-2">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Detail Information</CardTitle>
@@ -293,32 +313,22 @@ export default function FoodcourtDetailsPage() {
               </div>
               <div>
                 <dt className="text-muted-foreground text-sm font-medium">
-                  Logo
+                  Image
                 </dt>
                 <dd className="mt-1 text-sm">
-                  <div className="bg-muted/20 h-24 w-40 overflow-hidden rounded-md border">
-                    {foodcourt.logo ? (
-                      <img
-                        src={foodcourt.logo}
-                        alt="Foodcourt logo"
-                        className="h-full w-full object-contain"
+                  <div className="relative h-40 w-full max-w-xs overflow-hidden rounded-md border">
+                    {foodcourt.image ? (
+                      <Image
+                        src={foodcourt.image}
+                        alt="Foodcourt image"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 300px"
                       />
                     ) : (
-                      <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="32"
-                          height="32"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M21 11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8"></path>
-                          <rect x="8" y="8" width="8" height="8" rx="1"></rect>
-                        </svg>
+                      <div className="bg-muted/20 text-muted-foreground flex h-full w-full items-center justify-center">
+                        <Store className="h-12 w-12" />
+                        <p className="ml-2 text-sm">No image available</p>
                       </div>
                     )}
                   </div>
@@ -329,7 +339,7 @@ export default function FoodcourtDetailsPage() {
                   Created At
                 </dt>
                 <dd className="mt-1 text-sm">
-                  {new Date(foodcourt.createdAt).toLocaleDateString()}
+                  {formatDate(foodcourt.createdAt)}
                 </dd>
               </div>
               <div>
@@ -337,7 +347,7 @@ export default function FoodcourtDetailsPage() {
                   Last Updated
                 </dt>
                 <dd className="mt-1 text-sm">
-                  {new Date(foodcourt.updatedAt).toLocaleDateString()}
+                  {formatDate(foodcourt.updatedAt)}
                 </dd>
               </div>
             </dl>
@@ -422,7 +432,7 @@ export default function FoodcourtDetailsPage() {
                         <tr key={item.id} className="border-b">
                           <td className="px-4 py-2">{item.name}</td>
                           <td className="px-4 py-2">
-                            ${Number(item.price).toFixed(2)}
+                            {formatPrice(item.price)}
                           </td>
                           <td className="px-4 py-2">
                             <Badge

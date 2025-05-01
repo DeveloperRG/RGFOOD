@@ -15,7 +15,7 @@ const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   role: z
-    .enum([UserRole.ADMIN, UserRole.FOODCOURT_OWNER, UserRole.CUSTOMER])
+    .enum([UserRole.ADMIN, UserRole.OWNER, UserRole.CUSTOMER])
     .optional(),
 });
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       name,
       email,
       password,
-      role = UserRole.FOODCOURT_OWNER,
+      role = UserRole.OWNER,
     } = result.data;
 
     // Check if email already exists

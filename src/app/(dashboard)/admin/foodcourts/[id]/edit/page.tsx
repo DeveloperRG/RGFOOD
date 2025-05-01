@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
-import { Badge } from "~/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
-import { Skeleton } from "~/components/ui/skeleton";
+
 import {
   Form,
   FormControl,
@@ -23,206 +18,209 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
-import { Switch } from "~/components/ui/switch";
-import { Alert, AlertDescription } from "~/components/ui/alert";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Label } from "~/components/ui/label";
+import { ImageUpload } from "~/components/ui/image-upload";
 
-// Schema for validating foodcourt data
-const updateFoodcourtSchema = z.object({
-  name: z.string().min(1, { message: "Name is required" }),
-  description: z.string().nullable().optional(),
-  address: z.string().min(1, { message: "Address is required" }),
-  logo: z.string().nullable().optional(),
-  isActive: z.boolean().default(true),
-  ownerId: z.string().nullable().optional(),
-});
-
-type UpdateFoodcourtValues = z.infer<typeof updateFoodcourtSchema>;
-
-interface FoodcourtOwner {
+// Define types
+interface Owner {
   id: string;
   name: string | null;
-  email: string;
-  role?: string;
+  email: string | null;
 }
 
 interface Foodcourt {
   id: string;
   name: string;
-  address: string;
   description: string | null;
-  logo: string | null;
+  address: string;
+  image: string | null;
+  imagePublicId: string | null;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  status: "BUKA" | "TUTUP";
   ownerId: string | null;
-  creatorId: string;
-  owner: FoodcourtOwner | null;
-  creator: FoodcourtOwner | null;
+  owner: Owner | null;
 }
 
 export default function EditFoodcourtPage() {
   const params = useParams();
-  const router = useRouter();
   const foodcourtId = params.id as string;
+  const router = useRouter();
 
-  const [foodcourt, setFoodcourt] = useState<Foodcourt | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Component state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [potentialOwners, setPotentialOwners] = useState<FoodcourtOwner[]>([]);
+  const [image, setImage] = useState<File | null>(null);
+  const [foodcourt, setFoodcourt] = useState<Foodcourt | null>(null);
+  const [potentialOwners, setPotentialOwners] = useState<Owner[]>([]);
 
-  // Initialize the form
-  const form = useForm<UpdateFoodcourtValues>({
-    resolver: zodResolver(updateFoodcourtSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      address: "",
-      logo: "",
-      isActive: true,
-      ownerId: null,
-    },
+  // Form state
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    address: "",
+    isActive: true,
+    status: "BUKA" as "BUKA" | "TUTUP",
+    ownerId: "",
   });
-
-  // Fetch potential owners
-  useEffect(() => {
-    async function fetchPotentialOwners() {
-      try {
-        const response = await fetch('/api/admin/users?role=FOODCOURT_OWNER');
-        if (!response.ok) {
-          throw new Error('Failed to fetch potential owners');
-        }
-        const data = await response.json();
-        setPotentialOwners(data);
-      } catch (error) {
-        console.error('Error fetching potential owners:', error);
-        toast.error('Failed to load potential owners');
-      }
-    }
-
-    fetchPotentialOwners();
-  }, []);
 
   // Fetch foodcourt data
   useEffect(() => {
     async function fetchFoodcourt() {
-      setLoading(true);
+      setIsLoading(true);
+      setError(null);
+
       try {
+        console.log(`Fetching foodcourt data for ID: ${foodcourtId}`);
         const response = await fetch(`/api/admin/foodcourts/${foodcourtId}`);
 
         if (!response.ok) {
-          if (response.status === 404) {
-            router.push("/admin/foodcourts");
-            return;
-          }
-          throw new Error("Failed to fetch foodcourt");
+          console.error(`API error: ${response.status} ${response.statusText}`);
+          throw new Error(`Failed to fetch foodcourt: ${response.statusText}`);
         }
 
         const data = await response.json();
+        console.log("Foodcourt data received:", data);
+
         setFoodcourt(data);
 
-        // Set form values
-        form.reset({
-          name: data.name,
+        // Initialize form data from fetched foodcourt
+        setFormData({
+          name: data.name || "",
           description: data.description || "",
-          address: data.address,
-          logo: data.logo || "",
-          isActive: data.isActive,
-          ownerId: data.ownerId,
+          address: data.address || "",
+          isActive: data.isActive ?? true,
+          status: data.status || "BUKA",
+          ownerId: data.ownerId || "",
         });
+
+        // Fetch potential owners
+        await fetchPotentialOwners();
       } catch (error) {
-        toast.error("Failed to load foodcourt details. Please try again.");
-        setError("Failed to load foodcourt details. Please try again.");
+        console.error("Error fetching foodcourt:", error);
+        setError("Failed to load foodcourt data. Please try again.");
+        toast.error("Failed to load foodcourt data. Please try again.");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
+      }
+    }
+
+    async function fetchPotentialOwners() {
+      try {
+        const response = await fetch("/api/admin/foodcourt-owners/available");
+        if (!response.ok) {
+          throw new Error("Failed to fetch available owners");
+        }
+        const data = await response.json();
+        setPotentialOwners(data);
+      } catch (error) {
+        console.error("Error fetching potential owners:", error);
+        // Continue anyway, as this isn't critical
+        setPotentialOwners([]);
       }
     }
 
     if (foodcourtId) {
       fetchFoodcourt();
     }
-  }, [foodcourtId, router, form]);
+  }, [foodcourtId]);
+
+  // Handle form input changes
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle checkbox change
+  const handleCheckboxChange = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, isActive: checked }));
+  };
+
+  // Handle image change
+  const handleImageChange = (file: File | null) => {
+    setImage(file);
+  };
 
   // Handle form submission
-  async function onSubmit(data: UpdateFoodcourtValues) {
-    setSubmitting(true);
-    setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!foodcourt?.id) {
+      toast.error("Cannot update: Missing foodcourt ID");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/admin/foodcourts/${foodcourtId}`, {
+      console.log("Preparing form data for submission");
+
+      // Create form data for API request
+      const submitData = new FormData();
+
+      // Add form fields to FormData
+      submitData.append("name", formData.name);
+      submitData.append("description", formData.description || "");
+      submitData.append("address", formData.address);
+      submitData.append("isActive", formData.isActive.toString());
+      submitData.append("status", formData.status);
+
+      if (formData.ownerId) {
+        submitData.append("ownerId", formData.ownerId);
+      }
+
+      // Add image if there's a new one
+      if (image) {
+        submitData.append("image", image);
+      }
+
+      console.log("Submitting form data to API...");
+
+      // Send PUT request to API
+      const response = await fetch(`/api/admin/foodcourts/${foodcourt.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+        body: submitData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("API error response:", errorData);
         throw new Error(errorData.error || "Failed to update foodcourt");
       }
 
+      console.log("Foodcourt updated successfully");
+
+      // Success!
       toast.success("Foodcourt updated successfully");
-      router.push(`/admin/foodcourts/${foodcourtId}`);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-        toast.error(error.message);
-      } else {
-        setError("An unexpected error occurred");
-        toast.error("An unexpected error occurred");
-      }
+
+      // Redirect back to foodcourt details
+      router.push(`/admin/foodcourts/${foodcourt.id}`);
+      router.refresh();
+    } catch (error: any) {
+      console.error("Error updating foodcourt:", error);
+      toast.error(error.message || "Failed to update foodcourt");
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  // Display loading state
-  if (loading) {
+  // Show loading state
+  if (isLoading) {
     return (
-      <div className="container mx-auto py-8">
-        <div className="mb-6">
-          <Link href={`/admin/foodcourts/${foodcourtId}`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Foodcourt
-            </Button>
-          </Link>
-        </div>
-
-        <div className="mb-6">
-          <Skeleton className="h-10 w-[300px]" />
-          <Skeleton className="mt-2 h-4 w-[200px]" />
-        </div>
-
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-[200px]" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-[100px]" />
-                  <Skeleton className="h-10 w-full" />
-                </div>
-              ))}
-              <Skeleton className="h-10 w-[150px]" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="container mx-auto flex items-center justify-center py-8">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+        <span>Loading foodcourt data...</span>
       </div>
     );
   }
 
-  if (!foodcourt && !loading) {
+  // Show error state
+  if (error || !foodcourt) {
     return (
       <div className="container mx-auto py-8">
         <div className="mb-6">
@@ -233,30 +231,31 @@ export default function EditFoodcourtPage() {
             </Button>
           </Link>
         </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-6">
-            <h2 className="text-xl font-semibold">Foodcourt not found</h2>
-            <p className="text-muted-foreground mt-2">
-              The requested foodcourt could not be found.
-            </p>
-            <Button
-              className="mt-4"
-              onClick={() => router.push("/admin/foodcourts")}
-            >
-              Return to Foodcourts
-            </Button>
-          </CardContent>
-        </Card>
+
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="text-destructive flex items-center text-lg">
+            <AlertCircle className="mr-2 h-5 w-5" />
+            {error || "Failed to load foodcourt data"}
+          </div>
+          <Button
+            variant="default"
+            onClick={() => router.push("/admin/foodcourts")}
+          >
+            Return to Foodcourt List
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-0">
+    <div className="container mx-auto py-0">
       <div className="mb-6">
-        <Link href={`/admin/foodcourts/${foodcourtId}`}>
+        <Link href={`/admin/foodcourts/${foodcourt.id}`}>
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Foodcourt
             Back to Foodcourt
           </Button>
         </Link>
@@ -264,9 +263,7 @@ export default function EditFoodcourtPage() {
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Edit Foodcourt</h1>
-        <p className="text-muted-foreground">
-          Update the details for {foodcourt?.name}
-        </p>
+        <p className="text-muted-foreground">Update the foodcourt details</p>
       </div>
 
       {error && (
@@ -278,174 +275,144 @@ export default function EditFoodcourtPage() {
       <Card>
         <CardHeader>
           <CardTitle>Foodcourt Information</CardTitle>
+          <CardDescription>
+            Edit the details for {formData.name}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter foodcourt name"
-                        {...field}
-                        disabled={submitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid gap-6">
+              <div className="grid gap-3">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Enter foodcourt name"
+                  required
+                />
+              </div>
+
+              <div className="grid gap-3">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Enter description"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid gap-3">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="Enter address"
+                  required
+                />
+              </div>
+
+              <ImageUpload
+                id="image"
+                name="image"
+                label="Foodcourt Image"
+                description={
+                  foodcourt.image
+                    ? "Upload a new image to replace the current one"
+                    : "Upload a logo or image for the foodcourt (recommended size: 500x500px)"
+                }
+                defaultImage={foodcourt.image || undefined}
+                onChange={handleImageChange}
               />
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter description"
-                        {...field}
-                        value={field.value || ""}
-                        disabled={submitting}
-                        rows={3}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Provide a brief description of the foodcourt
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+              <div className="grid gap-3">
+                <Label htmlFor="ownerId">Owner</Label>
+                <select
+                  id="ownerId"
+                  name="ownerId"
+                  value={formData.ownerId}
+                  onChange={handleChange}
+                  className="border-input bg-background ring-offset-background focus:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                >
+                  <option value="">No owner assigned</option>
+                  {potentialOwners.map((owner) => (
+                    <option key={owner.id} value={owner.id}>
+                      {owner.name || "Unnamed"} ({owner.email || "No email"})
+                    </option>
+                  ))}
+                  {/* Include current owner if not in potential owners list */}
+                  {foodcourt.owner &&
+                    !potentialOwners.some(
+                      (o) => o.id === foodcourt.owner?.id,
+                    ) && (
+                      <option
+                        key={foodcourt.owner.id}
+                        value={foodcourt.owner.id}
+                      >
+                        {foodcourt.owner.name || "Unnamed"} (
+                        {foodcourt.owner.email || "No email"}) (Current)
+                      </option>
+                    )}
+                </select>
+                {potentialOwners.length === 0 && !foodcourt.owner && (
+                  <p className="text-sm text-yellow-600">
+                    No available owners found. All foodcourt owners already have
+                    a foodcourt assigned.
+                  </p>
                 )}
-              />
+                <p className="text-muted-foreground text-sm">
+                  Select a foodcourt owner from the list of available owners
+                </p>
+              </div>
 
-              <FormField
-                control={form.control}
-                name="address"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter address"
-                        {...field}
-                        disabled={submitting}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-3">
+                <Label htmlFor="status">Status</Label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="border-input bg-background ring-offset-background focus:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                >
+                  <option value="BUKA">Open</option>
+                  <option value="TUTUP">Closed</option>
+                </select>
+              </div>
 
-              <FormField
-                control={form.control}
-                name="logo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Logo URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter logo URL"
-                        {...field}
-                        value={field.value || ""}
-                        disabled={submitting}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Enter a URL for the foodcourt logo image
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isActive"
+                  name="isActive"
+                  checked={formData.isActive}
+                  onCheckedChange={handleCheckboxChange}
+                />
+                <Label htmlFor="isActive">Active</Label>
+              </div>
 
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active Status</FormLabel>
-                      <FormDescription>
-                        Set whether this foodcourt is active and visible to users
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={submitting}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="ownerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Owner</FormLabel>
-                    <Select
-                      disabled={submitting}
-                      onValueChange={(value) => {
-                        // If "none" is selected, set ownerId to null
-                        field.onChange(value === "none" ? null : value);
-                      }}
-                      value={field.value || "none"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an owner" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No owner</SelectItem>
-                        {potentialOwners.map((owner) => (
-                          <SelectItem key={owner.id} value={owner.id}>
-                            {owner.name || "Unnamed"} ({owner.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Select a foodcourt owner or leave empty for no owner
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex gap-4">
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? (
+              <div>
+                <Button
+                  type="submit"
+                  className="w-full md:w-auto"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      Updating...
                     </>
                   ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Changes
-                    </>
+                    "Update Foodcourt"
                   )}
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push(`/admin/foodcourts/${foodcourtId}`)}
-                  disabled={submitting}
-                >
-                  Cancel
-                </Button>
               </div>
-            </form>
-          </Form>
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>

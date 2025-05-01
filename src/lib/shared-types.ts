@@ -2,7 +2,7 @@
 // Enum for user roles - this file is safe to import in both client and server components
 export enum UserRole {
   CUSTOMER = "CUSTOMER",
-  FOODCOURT_OWNER = "FOODCOURT_OWNER",
+  OWNER = "OWNER",
   ADMIN = "ADMIN",
 }
 
@@ -28,12 +28,13 @@ export interface User {
 export interface Foodcourt {
   id: string;
   name: string;
-  address: string;
   description?: string | null;
-  logo?: string | null;
+  address: string;
+  image?: string | null; // Added the missing 'image' property
+  imagePublicId?: string | null;
   isActive: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
   ownerId?: string;
 }
 
@@ -50,7 +51,8 @@ export interface MenuItem {
   name: string;
   description?: string | null;
   price: number;
-  imageUrl?: string | null;
+  image?: string | null; // Added the missing 'image' property
+  imagePublicId?: string | null;
   isAvailable: boolean;
   foodcourtId: string;
   categoryId?: string | null;

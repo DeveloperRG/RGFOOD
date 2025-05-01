@@ -3,7 +3,7 @@ import "./src/env.js";
 /** @type {import("next").NextConfig} */
 const config = {
   images: {
-    domains: ['cdn-icons-png.flaticon.com'],
+    domains: ["cdn-icons-png.flaticon.com", "res.cloudinary.com"],
   },
 };
 

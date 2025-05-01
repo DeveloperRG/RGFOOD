@@ -26,7 +26,7 @@ export async function getCurrentUser(): Promise<User> {
 export async function checkRole(
   allowedRoles: UserRole[] = [
     UserRole.ADMIN,
-    UserRole.FOODCOURT_OWNER,
+    UserRole.OWNER,
   ],
 ) {
   const session = await getAuthSession();
@@ -49,7 +49,7 @@ export function isAdmin(session: Session | null): boolean {
 
 // Function to check if a user is a foodcourt owner
 export function isFoodcourtOwner(session: Session | null): boolean {
-  return session?.user?.role === UserRole.FOODCOURT_OWNER;
+  return session?.user?.role === UserRole.OWNER;
 }
 
 // Function to check if the user owns a specific foodcourt
@@ -63,7 +63,7 @@ export async function checkFoodcourtOwnership(
   if (session.user.role === UserRole.ADMIN) return true;
 
   // For foodcourt owners, check ownership
-  if (session.user.role === UserRole.FOODCOURT_OWNER) {
+  if (session.user.role === UserRole.OWNER) {
     // Get the user's owned foodcourts
     const response = await fetch(`/api/users/${session.user.id}/foodcourts`);
     const { foodcourts } = await response.json();

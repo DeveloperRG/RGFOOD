@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
@@ -15,7 +14,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Switch } from "~/components/ui/switch";
-import { Label } from "~/components/ui/label";
+import { ImageUpload } from "~/components/ui/image-upload";
 import {
   Form,
   FormControl,
@@ -36,7 +35,8 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
   price: z.coerce.number().positive("Price must be greater than 0"),
-  imageUrl: z.string().optional(),
+  image: z.string().optional(),
+  imagePublicId: z.string().optional(),
   isAvailable: z.boolean(),
   categoryId: z.string().optional(),
 });
@@ -55,7 +55,8 @@ export default function NewMenuItemPage() {
       name: "",
       description: "",
       price: 0,
-      imageUrl: "",
+      image: "",
+      imagePublicId: "",
       isAvailable: true,
       categoryId: "",
     },
@@ -175,25 +176,38 @@ export default function NewMenuItemPage() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Image URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="https://example.com/image.jpg"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Link to an image of this menu item (optional)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-3">
+                <FormLabel>Menu Item Image</FormLabel>
+                <div className="flex items-start space-x-2">
+                  <FormField
+                    control={form.control}
+                    name="image"
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <ImageUpload
+                            id="menu-image"
+                            // Pass field.name to the ImageUpload component
+                            name={field.name}
+                            label=""
+                            description="Upload an image for this menu item (recommended size: 500x500px)"
+                            defaultImage={field.value}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <input
+                    type="hidden"
+                    id="imagePublicId"
+                    {...form.register("imagePublicId")}
+                  />
+                </div>
+                <FormDescription>
+                  Image will be displayed on menu listings and detail pages
+                </FormDescription>
+              </div>
 
               <FormField
                 control={form.control}

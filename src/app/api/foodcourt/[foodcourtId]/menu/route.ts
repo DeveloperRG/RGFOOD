@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "~/server/auth";
+import { deleteImage } from "~/lib/cloudinary-utils";
 
 // GET /api/foodcourt/[foodcourtId]/menu - List menu items
 export async function GET(
@@ -84,8 +85,15 @@ export async function POST(
     }
 
     const data = await request.json();
-    const { name, description, price, imageUrl, isAvailable, categoryId } =
-      data;
+    const {
+      name,
+      description,
+      price,
+      image,
+      imagePublicId,
+      isAvailable,
+      categoryId,
+    } = data;
 
     if (!name || !price) {
       return NextResponse.json(
@@ -150,7 +158,7 @@ export async function POST(
     ]);
 
     const isAdmin = user?.role === "ADMIN";
-    const isFoodcourtOwner = user?.role === "FOODCOURT_OWNER";
+    const isFoodcourtOwner = user?.role === "OWNER";
     const hasPermission =
       !!userPermission?.canEditMenu || foodcourt.ownerId === session.user.id;
 
@@ -174,7 +182,8 @@ export async function POST(
         name,
         description,
         price: priceValue,
-        imageUrl,
+        image,
+        imagePublicId,
         isAvailable: isAvailable ?? true,
         foodcourtId: foodcourt.id,
         categoryId,

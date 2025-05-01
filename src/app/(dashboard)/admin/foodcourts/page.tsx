@@ -8,8 +8,6 @@ import { Input } from "~/components/ui/input";
 import { FoodcourtCardGrid } from "~/components/dashboard/admin/foodcourts/foodcourt-CardGrid";
 import "~/styles/globals.css";
 
-
-
 const STATUS_FILTER = {
   ALL: "all",
   ACTIVE: "active",

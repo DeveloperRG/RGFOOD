@@ -1,8 +1,14 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('CUSTOMER', 'FOODCOURT_OWNER', 'ADMIN');
+CREATE TYPE "UserRole" AS ENUM ('CUSTOMER', 'OWNER', 'ADMIN');
 
 -- CreateEnum
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'PREPARING', 'READY', 'DELIVERED', 'CANCELED');
+
+-- CreateEnum
+CREATE TYPE "CategoryType" AS ENUM ('MAKANAN_UTAMA', 'MINUMAN', 'CEMILAN', 'MAKANAN_MANIS');
+
+-- CreateEnum
+CREATE TYPE "FoodcourtStatus" AS ENUM ('BUKA', 'TUTUP');
 
 -- CreateTable
 CREATE TABLE "accounts" (
@@ -48,6 +54,7 @@ CREATE TABLE "users" (
     "email" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
+    "imagePublicId" TEXT,
     "password" TEXT,
     "role" "UserRole" NOT NULL DEFAULT 'CUSTOMER',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -63,8 +70,10 @@ CREATE TABLE "foodcourts" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "address" TEXT NOT NULL,
-    "logo" TEXT,
+    "image" TEXT,
+    "imagePublicId" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "status" "FoodcourtStatus" NOT NULL DEFAULT 'BUKA',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "ownerId" TEXT,
@@ -76,12 +85,10 @@ CREATE TABLE "foodcourts" (
 -- CreateTable
 CREATE TABLE "foodcourt_categories" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "displayOrder" INTEGER NOT NULL DEFAULT 0,
+    "category" "CategoryType" NOT NULL,
+    "foodcourtId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "foodcourtId" TEXT NOT NULL,
 
     CONSTRAINT "foodcourt_categories_pkey" PRIMARY KEY ("id")
 );
@@ -111,24 +118,13 @@ CREATE TABLE "table_sessions" (
 );
 
 -- CreateTable
-CREATE TABLE "menu_categories" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "displayOrder" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "menu_categories_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "menu_items" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "price" DECIMAL(10,2) NOT NULL,
-    "imageUrl" TEXT,
+    "image" TEXT,
+    "imagePublicId" TEXT,
     "isAvailable" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -238,6 +234,9 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "foodcourts_ownerId_key" ON "foodcourts"("ownerId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "foodcourt_categories_foodcourtId_category_key" ON "foodcourt_categories"("foodcourtId", "category");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "tables_tableNumber_key" ON "tables"("tableNumber");
 
 -- CreateIndex
@@ -263,9 +262,6 @@ ALTER TABLE "foodcourt_categories" ADD CONSTRAINT "foodcourt_categories_foodcour
 
 -- AddForeignKey
 ALTER TABLE "table_sessions" ADD CONSTRAINT "table_sessions_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "tables"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "menu_items" ADD CONSTRAINT "menu_items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "menu_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "menu_items" ADD CONSTRAINT "menu_items_foodcourtId_fkey" FOREIGN KEY ("foodcourtId") REFERENCES "foodcourts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

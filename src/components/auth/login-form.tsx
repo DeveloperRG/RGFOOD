@@ -94,7 +94,7 @@ export function LoginForm() {
 
       let redirectUrl = "/";
 
-      if (session?.user?.role === UserRole.FOODCOURT_OWNER) {
+      if (session?.user?.role === UserRole.OWNER) {
         const userId = session.user.id;
         redirectUrl = `/owner/${userId}`;
       } else if (session?.user?.role === UserRole.ADMIN) {

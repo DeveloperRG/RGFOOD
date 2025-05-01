@@ -64,7 +64,7 @@ export default auth(async (req) => {
     session?.user.role !== UserRole.ADMIN
   ) {
     // Redirect owners to their dashboard
-    if (session?.user.role === UserRole.FOODCOURT_OWNER) {
+    if (session?.user.role === UserRole.OWNER) {
       return NextResponse.redirect(new URL("/owner", nextUrl));
     }
     // Otherwise redirect to home
@@ -74,7 +74,7 @@ export default auth(async (req) => {
   // Owner route protection
   if (
     nextUrl.pathname.startsWith("/owner") &&
-    session?.user.role !== UserRole.FOODCOURT_OWNER &&
+    session?.user.role !== UserRole.OWNER &&
     session?.user.role !== UserRole.ADMIN
   ) {
     return NextResponse.redirect(new URL("/", nextUrl));
