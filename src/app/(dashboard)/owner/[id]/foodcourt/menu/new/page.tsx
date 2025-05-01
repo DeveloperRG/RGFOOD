@@ -1,7 +1,7 @@
 // ~/app/(dashboard)/owner/[id]/foodcourt/menu/new/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   Card,
@@ -35,8 +35,6 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional(),
   price: z.coerce.number().positive("Price must be greater than 0"),
-  image: z.string().optional(),
-  imagePublicId: z.string().optional(),
   isAvailable: z.boolean(),
   categoryId: z.string().optional(),
 });
@@ -47,6 +45,7 @@ export default function NewMenuItemPage() {
   const params = useParams();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [image, setImage] = useState<File | null>(null);
 
   // Initialize the form with default values
   const form = useForm<z.infer<typeof formSchema>>({
@@ -55,34 +54,67 @@ export default function NewMenuItemPage() {
       name: "",
       description: "",
       price: 0,
-      image: "",
-      imagePublicId: "",
       isAvailable: true,
       categoryId: "",
     },
   });
 
+  // Handle image change
+  const handleImageChange = (file: File | null) => {
+    setImage(file);
+    console.log("Image changed:", file?.name);
+  };
+
   // Handle form submission
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setSaving(true);
+      console.log("Submitting form data:", values);
+      console.log("Image file:", image);
+
+      // Create a FormData object to handle the file upload
+      const formData = new FormData();
+
+      // Add form values to FormData
+      formData.append("name", values.name);
+      formData.append("description", values.description || "");
+      formData.append("price", values.price.toString());
+      formData.append("isAvailable", values.isAvailable.toString());
+
+      if (values.categoryId) {
+        formData.append("categoryId", values.categoryId);
+      }
+
+      // Add image if selected
+      if (image) {
+        formData.append("image", image);
+      }
+
+      console.log("Sending FormData to API...");
+
+      // Send the request with FormData
       const response = await fetch(`/api/foodcourt/${params.id}/menu`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(values),
+        body: formData,
+        // Don't set Content-Type header - browser will set it with boundary
       });
 
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${await response.text()}`);
+        const errorText = await response.text();
+        console.error("API error response:", errorText);
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       const newMenuItem = await response.json();
+      console.log("Menu item created successfully:", newMenuItem);
+
       toast.success("Menu item created successfully");
+
       // Navigate to the menu item detail view
       router.push(`/owner/${params.id}/foodcourt/menu/${newMenuItem.id}`);
+      router.refresh();
     } catch (err) {
+      console.error("Error creating menu item:", err);
       toast.error(
         err instanceof Error ? err.message : "Failed to create menu item",
       );
@@ -179,30 +211,18 @@ export default function NewMenuItemPage() {
               <div className="space-y-3">
                 <FormLabel>Menu Item Image</FormLabel>
                 <div className="flex items-start space-x-2">
-                  <FormField
-                    control={form.control}
-                    name="image"
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormControl>
-                          <ImageUpload
-                            id="menu-image"
-                            // Pass field.name to the ImageUpload component
-                            name={field.name}
-                            label=""
-                            description="Upload an image for this menu item (recommended size: 500x500px)"
-                            defaultImage={field.value}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <input
-                    type="hidden"
-                    id="imagePublicId"
-                    {...form.register("imagePublicId")}
-                  />
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <ImageUpload
+                        id="menu-image"
+                        name="image"
+                        label=""
+                        description="Upload an image for this menu item (recommended size: 500x500px)"
+                        onChange={handleImageChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 </div>
                 <FormDescription>
                   Image will be displayed on menu listings and detail pages
