@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-import { UserRole} from "@prisma/client";
+import { UserRole } from "@prisma/client";
 
 // Handler untuk mendapatkan daftar owner yang belum memiliki foodcourt
-export async function GET(
-    req: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest) {
     try {
         // Periksa autentikasi
         const session = await auth();
@@ -18,30 +15,11 @@ export async function GET(
             );
         }
 
-        const {id : foodcourtId} = params;
-
-        // Periksa apakah foodcourt ada
-        const existingFoodcourt = await db.foodcourt.findUnique({
-            where: { id: foodcourtId },
-            select: { id: true, ownerId: true },
-        });
-
-        if (!existingFoodcourt) {
-            return NextResponse.json(
-                { error: 'Foodcourt not found' },
-                { status: 404 }
-            );
-        }
-
         // Cari user dengan role OWNER yang belum memiliki foodcourt
-        // atau yang saat ini adalah pemilik dari foodcourt ini
         const availableOwners = await db.user.findMany({
             where: {
                 role: UserRole.OWNER,
-                OR: [
-                    { ownedFoodcourt: null }, // Belum memiliki foodcourt
-                    { id: existingFoodcourt.ownerId || '' }, // Adalah owner saat ini
-                ],
+                ownedFoodcourt: null, // Belum memiliki foodcourt
             },
             select: {
                 id: true,

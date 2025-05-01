@@ -1,8 +1,6 @@
-// ~/src/app/(dashboard)/admin/foodcourts/new/page.tsx
-
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -29,14 +27,11 @@ interface Owner {
   email: string | null;
 }
 
-// Page props interface to receive owners data
-interface NewFoodcourtPageProps {
-  potentialOwners: Owner[];
-}
-
-export default function NewFoodcourtPage({ potentialOwners = [] }: NewFoodcourtPageProps) {
+export default function NewFoodcourtPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [potentialOwners, setPotentialOwners] = useState<Owner[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -45,6 +40,30 @@ export default function NewFoodcourtPage({ potentialOwners = [] }: NewFoodcourtP
     isActive: true,
   });
   const [image, setImage] = useState<File | null>(null);
+
+  // Fetch available owners when component mounts
+  useEffect(() => {
+    const fetchAvailableOwners = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/admin/foodcourts/available-owners");
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch available owners");
+        }
+
+        const data = await response.json();
+        setPotentialOwners(data);
+      } catch (error) {
+        console.error("Error fetching available owners:", error);
+        toast.error("Failed to load available owners");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAvailableOwners();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -71,7 +90,7 @@ export default function NewFoodcourtPage({ potentialOwners = [] }: NewFoodcourtP
       submitData.append("address", formData.address);
       submitData.append("ownerId", formData.ownerId || "");
       submitData.append("isActive", formData.isActive ? "true" : "false");
-      
+
       // Add image if selected
       if (image) {
         submitData.append("image", image);
@@ -91,151 +110,160 @@ export default function NewFoodcourtPage({ potentialOwners = [] }: NewFoodcourtP
 
       // Success handling
       toast.success(
-         "Foodcourt created successfully"
+          "Foodcourt created successfully"
       );
-      
+
       // Redirect to foodcourts list
       router.push("/admin/foodcourts");
       router.refresh(); // Refresh the page data
     } catch (error) {
       console.error("Error creating foodcourt:", error);
       toast.error(
-        "Failed to create foodcourt",
-        );
+          "Failed to create foodcourt",
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="container mx-auto py-0">
-      <div className="mb-6">
-        <Link href="/admin/foodcourts">
-          <Button variant="outline" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Foodcourts
-          </Button>
-        </Link>
-      </div>
+      <div className="container mx-auto py-0">
+        <div className="mb-6">
+          <Link href="/admin/foodcourts">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Foodcourts
+            </Button>
+          </Link>
+        </div>
 
-      <div className="mb-">
-        <h1 className="text-3xl font-bold tracking-tight">Add New Foodcourt</h1>
-        <p className="text-muted-foreground">
-          Create a new foodcourt in the system
-        </p>
-      </div>
+        <div className="mb-">
+          <h1 className="text-3xl font-bold tracking-tight">Add New Foodcourt</h1>
+          <p className="text-muted-foreground">
+            Create a new foodcourt in the system
+          </p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Foodcourt Information</CardTitle>
-          <CardDescription>
-            Enter the details for the new foodcourt
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-6">
-              <div className="grid gap-3">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Enter foodcourt name"
-                  required
+        <Card>
+          <CardHeader>
+            <CardTitle>Foodcourt Information</CardTitle>
+            <CardDescription>
+              Enter the details for the new foodcourt
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid gap-6">
+                <div className="grid gap-3">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Enter foodcourt name"
+                      required
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                      id="description"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      placeholder="Enter description"
+                      rows={3}
+                  />
+                </div>
+
+                <div className="grid gap-3">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      placeholder="Enter address"
+                      required
+                  />
+                </div>
+
+                <ImageUpload
+                    id="image"
+                    name="image"
+                    label="Foodcourt Image"
+                    description="Upload a logo or image for the foodcourt (recommended size: 500x500px)"
+                    onChange={handleImageChange}
                 />
-              </div>
 
-              <div className="grid gap-3">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Enter description"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-3">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Enter address"
-                  required
-                />
-              </div>
-
-              <ImageUpload
-                id="image"
-                name="image"
-                label="Foodcourt Image"
-                description="Upload a logo or image for the foodcourt (recommended size: 500x500px)"
-                onChange={handleImageChange}
-              />
-
-              <div className="grid gap-3">
-                <Label htmlFor="ownerId">Owner</Label>
-                <select
-                  id="ownerId"
-                  name="ownerId"
-                  value={formData.ownerId}
-                  onChange={handleChange}
-                  className="border-input bg-background ring-offset-background focus:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                >
-                  <option value="">Select an owner</option>
-                  {potentialOwners.map((owner) => (
-                    <option key={owner.id} value={owner.id}>
-                      {owner.name || "Unnamed"} ({owner.email || "No email"})
-                    </option>
-                  ))}
-                </select>
-                {potentialOwners.length === 0 && (
-                  <p className="text-sm text-yellow-600">
-                    No available owners found. All foodcourt owners already have
-                    a foodcourt assigned.
-                  </p>
-                )}
-                <p className="text-muted-foreground text-sm">
-                  Select a foodcourt owner from the list of available owners
-                </p>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="isActive" 
-                  name="isActive" 
-                  checked={formData.isActive}
-                  onCheckedChange={handleCheckboxChange}
-                />
-                <Label htmlFor="isActive">Active</Label>
-              </div>
-
-              <div>
-                <Button 
-                  type="submit" 
-                  className="w-full md:w-auto"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
+                <div className="grid gap-3">
+                  <Label htmlFor="ownerId">Owner</Label>
+                  {isLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Loading available owners...</span>
+                      </div>
                   ) : (
-                    "Create Foodcourt"
+                      <>
+                        <select
+                            id="ownerId"
+                            name="ownerId"
+                            value={formData.ownerId}
+                            onChange={handleChange}
+                            className="border-input bg-background ring-offset-background focus:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                        >
+                          <option value="">Select an owner</option>
+                          {potentialOwners.map((owner) => (
+                              <option key={owner.id} value={owner.id}>
+                                {owner.name || "Unnamed"} ({owner.email || "No email"})
+                              </option>
+                          ))}
+                        </select>
+                        {potentialOwners.length === 0 && !isLoading && (
+                            <p className="text-sm text-yellow-600">
+                              No available owners found. All foodcourt owners already have
+                              a foodcourt assigned.
+                            </p>
+                        )}
+                      </>
                   )}
-                </Button>
+                  <p className="text-muted-foreground text-sm">
+                    Select a foodcourt owner from the list of available owners
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                      id="isActive"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onCheckedChange={handleCheckboxChange}
+                  />
+                  <Label htmlFor="isActive">Active</Label>
+                </div>
+
+                <div>
+                  <Button
+                      type="submit"
+                      className="w-full md:w-auto"
+                      disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                    ) : (
+                        "Create Foodcourt"
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
   );
 }
