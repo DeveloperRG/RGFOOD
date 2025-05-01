@@ -8,14 +8,12 @@ import { Button } from "~/components/ui/button";
 import { toast } from "sonner";
 
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "~/components/ui/form";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -250,12 +248,10 @@ export default function EditFoodcourtPage() {
 
   return (
     <div className="container mx-auto py-0">
-    <div className="container mx-auto py-0">
       <div className="mb-6">
         <Link href={`/admin/foodcourts/${foodcourt.id}`}>
           <Button variant="outline" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Foodcourt
             Back to Foodcourt
           </Button>
         </Link>
@@ -265,12 +261,6 @@ export default function EditFoodcourtPage() {
         <h1 className="text-3xl font-bold tracking-tight">Edit Foodcourt</h1>
         <p className="text-muted-foreground">Update the foodcourt details</p>
       </div>
-
-      {error && (
-        <Alert variant="destructive" className="mb-6">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       <Card>
         <CardHeader>
