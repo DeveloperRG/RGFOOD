@@ -106,7 +106,7 @@ export default function EditFoodcourtPage() {
 
     async function fetchPotentialOwners() {
       try {
-        const response = await fetch(`/api/admin/foodcourts/${foodcourtId}/available-owners`);
+        const response = await fetch(`/api/admin/foodcourts/available-owners`);
         if (!response.ok) {
           throw new Error("Failed to fetch available owners");
         }
