@@ -64,7 +64,7 @@ export function BulkAssignmentForm() {
   // Update filtered owners when filters change
   useEffect(() => {
     let filtered = [...owners];
-    
+
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -74,12 +74,12 @@ export function BulkAssignmentForm() {
           (owner.email && owner.email.toLowerCase().includes(term))
       );
     }
-    
+
     // Filter by foodcourt
     if (filterHasFoodcourt) {
       filtered = filtered.filter(owner => owner.ownedFoodcourt);
     }
-    
+
     setFilteredOwners(filtered);
   }, [owners, searchTerm, filterHasFoodcourt]);
 
@@ -97,11 +97,11 @@ export function BulkAssignmentForm() {
     try {
       setIsLoadingTemplates(true);
       const response = await fetch("/api/admin/permission-templates");
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch templates");
       }
-      
+
       const data = await response.json();
       setTemplates(data.data || []);
     } catch (error) {
@@ -115,12 +115,12 @@ export function BulkAssignmentForm() {
   const fetchOwners = async () => {
     try {
       setIsLoadingOwners(true);
-      const response = await fetch("/api/admin/users?role=OWNER");
-      
+      const response = await fetch("/api/admin/owners");
+
       if (!response.ok) {
         throw new Error("Failed to fetch owners");
       }
-      
+
       const data = await response.json();
       setOwners(data.data || []);
     } catch (error) {
@@ -173,9 +173,9 @@ export function BulkAssignmentForm() {
       }
 
       const result = await response.json();
-      
+
       toast.success(`Template applied to ${result.summary.successful} owners successfully`);
-      
+
       // Reset selections
       setSelectedOwners([]);
       setSelectedTemplate("");
@@ -225,7 +225,7 @@ export function BulkAssignmentForm() {
                 )}
               </SelectContent>
             </Select>
-            
+
             {previewTemplate && (
               <Popover>
                 <PopoverTrigger asChild>
@@ -273,7 +273,7 @@ export function BulkAssignmentForm() {
             )}
           </div>
         </div>
-        
+
         {/* Owner Filters */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -291,14 +291,14 @@ export function BulkAssignmentForm() {
               </Label>
             </div>
           </div>
-          
+
           <Input
             placeholder="Search by name or email"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         {/* Owner Selection Table */}
         <div className="rounded-md border">
           {isLoadingOwners ? (
@@ -355,7 +355,7 @@ export function BulkAssignmentForm() {
             </Table>
           )}
         </div>
-        
+
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div>
             {selectedOwners.length} of {filteredOwners.length} owners selected
