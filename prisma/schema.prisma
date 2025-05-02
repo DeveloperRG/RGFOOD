@@ -61,12 +61,15 @@ model User {
   updatedAt     DateTime  @updatedAt
   lastLogin     DateTime?
 
-  accounts          Account[]
-  sessions          Session[]
-  ownedFoodcourt    Foodcourt?       @relation("FoodcourtOwner")
-  createdFoodcourts Foodcourt[]      @relation("FoodcourtCreator")
-  permissions       OwnerPermission[]
-  updatedLogs       OrderLog[]
+  accounts              Account[]
+  sessions              Session[]
+  ownedFoodcourt        Foodcourt?           @relation("FoodcourtOwner")
+  createdFoodcourts     Foodcourt[]          @relation("FoodcourtCreator")
+  permissions           OwnerPermission[]
+  updatedLogs           OrderLog[]
+  createdTemplates      PermissionTemplate[]
+  permissionChanges     PermissionHistory[]  @relation("ChangedBy")
+  updatedDefaultPerms   DefaultPermission[]
 
   @@map("users")
 }
@@ -190,6 +193,33 @@ model OrderItem {
   @@map("order_items")
 }
 
+model PermissionTemplate {
+  id                String    @id @default(cuid())
+  name              String    @unique
+  description       String?
+  canEditMenu       Boolean   @default(true)
+  canViewOrders     Boolean   @default(true)
+  canUpdateOrders   Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  createdById       String
+  createdBy         User      @relation(fields: [createdById], references: [id])
+
+  @@map("permission_templates")
+}
+
+model DefaultPermission {
+  id                String    @id @default(cuid())
+  canEditMenu       Boolean   @default(true)
+  canViewOrders     Boolean   @default(true)
+  canUpdateOrders   Boolean   @default(true)
+  updatedAt         DateTime  @updatedAt
+  updatedById       String
+  updatedBy         User      @relation(fields: [updatedById], references: [id])
+
+  @@map("default_permissions")
+}
+
 model OwnerPermission {
   id              String    @id @default(cuid())
   canEditMenu     Boolean   @default(true)
@@ -199,9 +229,25 @@ model OwnerPermission {
   foodcourtId     String
   owner           User      @relation(fields: [ownerId], references: [id])
   foodcourt       Foodcourt @relation(fields: [foodcourtId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  history         PermissionHistory[]
 
   @@unique([ownerId, foodcourtId])
   @@map("owner_permissions")
+}
+
+model PermissionHistory {
+  id                String    @id @default(cuid())
+  permissionId      String
+  previousSettings  Json      // Menyimpan state sebelumnya dalam format JSON
+  newSettings       Json      // Menyimpan state baru dalam format JSON
+  changedAt         DateTime  @default(now())
+  changedById       String
+  changedBy         User      @relation("ChangedBy", fields: [changedById], references: [id])
+  permission        OwnerPermission @relation(fields: [permissionId], references: [id])
+
+  @@map("permission_history")
 }
 
 model OrderLog {
