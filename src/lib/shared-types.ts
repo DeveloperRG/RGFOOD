@@ -30,7 +30,7 @@ export interface Foodcourt {
   name: string;
   description?: string | null;
   address: string;
-  image?: string | null; // Added the missing 'image' property
+  image?: string | null;
   imagePublicId?: string | null;
   isActive: boolean;
   createdAt: Date;
@@ -107,4 +107,9 @@ export interface OwnerPermission {
   canUpdateOrders: boolean;
   ownerId: string;
   foodcourtId: string;
+}
+
+export enum FoodcourtStatus {
+  BUKA = "BUKA",
+  TUTUP = "TUTUP",
 }

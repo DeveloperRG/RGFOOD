@@ -1,63 +1,186 @@
-import React from "react";
-import { Card, CardContent } from "~/components/ui/card";
-import { TrendingDown, TrendingUp } from "lucide-react";
+"use client";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Tooltip,
+  Cell,
+  Sector,
+} from "recharts";
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "~/components/ui/card";
 import Link from "next/link";
 
 interface DashboardMetricCardProps {
   title: string;
   value: number;
   description: string;
-  icon: React.ReactNode;
-  trend: {
-    value: number;
-    isPositive: boolean;
-  } | null;
+  data: { name: string; value: number; fill: string }[];
+  link?: string;
   href?: string;
+  className?: string;
+  extraContent?: React.ReactNode;
 }
 
 export function DashboardMetricCard({
   title,
   value,
   description,
-  icon,
-  trend,
-  href,
+  data,
+  link,
 }: DashboardMetricCardProps) {
-  const content = (
-    <Card className="cursor-pointer transition hover:shadow-md">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between space-x-4">
-          <div className="flex flex-col space-y-1">
-            <span className="text-muted-foreground text-sm font-medium">
-              {title}
-            </span>
-            <span className="text-2xl font-bold">{value}</span>
-            <span className="text-muted-foreground pt-1 text-xs">
-              {description}
-            </span>
-          </div>
-          <div className="rounded-full bg-gray-100 p-3">{icon}</div>
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [clickedIndex, setClickedIndex] = useState<number | null>(null);
+
+  const onPieEnter = (_: any, index: number) => {
+    setHoverIndex(index);
+  };
+
+  const onPieLeave = () => {
+    setHoverIndex(null);
+  };
+
+  const onPieClick = (_: any, index: number) => {
+    setClickedIndex(index === clickedIndex ? null : index);
+  };
+
+  const localizedData = data.map((entry) => ({
+    ...entry,
+    name:
+      entry.name === "Active"
+        ? "Buka"
+        : entry.name === "Inactive"
+          ? "Tutup"
+          : entry.name === "Aktif"
+            ? "Aktif"
+            : entry.name === "Tidak Aktif"
+              ? "Tidak Aktif"
+              : entry.name,
+  }));
+
+  const renderActiveShape = (props: any) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } =
+      props;
+
+    return (
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 8}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+    );
+  };
+
+  const cardContent = (
+    <Card className="flex flex-col rounded-xl bg-white shadow-md transition-shadow duration-500 hover:shadow-xl">
+      <CardHeader className="items-center pb-0">
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
+      </CardHeader>
+
+      <CardContent className="flex flex-1 flex-col items-center gap-2 pb-4">
+        <div className="mx-auto aspect-square max-h-[250px]">
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <defs>
+                <linearGradient id="gradBuka" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#4ade80" />
+                  <stop offset="100%" stopColor="#22c55e" />
+                </linearGradient>
+                <linearGradient id="gradTutup" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#f87171" />
+                  <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+                <linearGradient id="gradAktif" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#60a5fa" />
+                  <stop offset="100%" stopColor="#3b82f6" />
+                </linearGradient>
+                <linearGradient id="gradTidakAktif" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#facc15" />
+                  <stop offset="100%" stopColor="#eab308" />
+                </linearGradient>
+              </defs>
+
+              <Pie
+                data={localizedData.map((entry) => ({
+                  ...entry,
+                  fill:
+                    entry.name === "Buka"
+                      ? "url(#gradBuka)"
+                      : entry.name === "Tutup"
+                        ? "url(#gradTutup)"
+                        : entry.name === "Aktif"
+                          ? "url(#gradAktif)"
+                          : entry.name === "Tidak Aktif"
+                            ? "url(#gradTidakAktif)"
+                            : entry.fill,
+                }))}
+                dataKey="value"
+                innerRadius={60}
+                outerRadius={80}
+                activeIndex={hoverIndex ?? clickedIndex ?? undefined}
+                activeShape={renderActiveShape}
+                onMouseEnter={onPieEnter}
+                onMouseLeave={onPieLeave}
+                onClick={onPieClick}
+                animationDuration={500}
+              >
+                {localizedData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <text
+                x="50%"
+                y="50%"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill="#1f2937"
+                fontSize={24}
+                fontWeight="bold"
+              >
+                {value}
+              </text>
+            </PieChart>
+          </ResponsiveContainer>
         </div>
 
-        {trend && (
-          <div className="mt-3 flex items-center text-xs">
-            {trend.isPositive ? (
-              <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
-            ) : (
-              <TrendingDown className="mr-1 h-3 w-3 text-red-500" />
-            )}
+        {/* Label breakdown langsung di bawah grafik */}
+        <div className="mt-2 flex flex-wrap justify-center gap-4 text-sm">
+          {localizedData.map((entry, index) => (
             <span
-              className={trend.isPositive ? "text-green-500" : "text-red-500"}
+              key={index}
+              className="flex items-center gap-1 font-semibold"
+              style={{
+                color: entry.fill.includes("url") ? "#000" : entry.fill,
+              }}
             >
-              {trend.isPositive ? "+" : "-"}
-              {trend.value}%
+              {entry.name}: {entry.value}
             </span>
-            <span className="text-muted-foreground ml-1">from last month</span>
-          </div>
-        )}
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
 
-  return href ? <Link href={href}>{content}</Link> : content;
+  return link ? (
+    <Link
+      href={link}
+      className="block rounded-xl transition-shadow hover:shadow-lg"
+    >
+      {cardContent}
+    </Link>
+  ) : (
+    cardContent
+  );
 }

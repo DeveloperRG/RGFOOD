@@ -1,12 +1,7 @@
-// ~/src/components/dashboard/admin/admin-dashboard.tsx
-"use client";
-
-import { ShoppingCart, Store, Users, Book } from "lucide-react";
 import { DashboardMetricCard } from "~/components/dashboard/admin/dashboard-metric-card";
 import { PendingRegistrationsCard } from "~/components/dashboard/admin/pending-registrations-card";
 import { UserRole } from "~/lib/shared-types";
 
-// Types based on your schema
 interface User {
   id: string;
   name?: string | null;
@@ -24,23 +19,38 @@ interface PendingRegistration {
 interface AdminDashboardProps {
   user: User;
   metrics: {
-    foodCourtCount: number;
-    ownerCount: number;
+    foodCourtCount: {
+      active: number;
+      inactive: number;
+    };
+    foodcourtStatus: {
+      active: number;
+      inactive: number;
+    };
+    ownerCount: {
+      total: number;
+      withFoodcourt: number;
+      withoutFoodcourt: number;
+    };
     orderCount: number;
     totalMenuItems: number;
   };
   pendingRegistrations: PendingRegistration[];
 }
 
-export function AdminDashboard({
+export async function AdminDashboard({
   user,
   metrics,
   pendingRegistrations,
 }: AdminDashboardProps) {
+  const totalFoodCourts =
+    (metrics.foodCourtCount.active || 0) +
+      (metrics.foodCourtCount.inactive || 0) || 0;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <h1 className="text-3xl font-bold">Dashboard Admin</h1>
         <p className="text-muted-foreground">
           Mengelola Stand, pemilik, dan keseluruhan operasi platform
         </p>
@@ -49,25 +59,99 @@ export function AdminDashboard({
       {/* Dashboard metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardMetricCard
-          title="Stand"
-          value={metrics.foodCourtCount}
-          description="Total registered food courts"
-          icon={<Store className="h-5 w-5" />}
-          trend={null}
-          href="/admin/foodcourts"
+          className="h-[250px]"
+          title="Operasi Stand"
+          link="/admin/foodcourts"
+          value={
+            metrics.foodcourtStatus.active + metrics.foodcourtStatus.inactive
+          }
+          description="Total Stand Yang Beroperasi"
+          data={[
+            {
+              name: "Buka",
+              value: metrics.foodcourtStatus.active,
+              fill: "#4ade80",
+            },
+            {
+              name: "Tutup",
+              value: metrics.foodcourtStatus.inactive,
+              fill: "#f87171",
+            },
+          ]}
+          extraContent={
+            <div className="flex justify-end gap-4 text-sm">
+              <span className="font-semibold text-green-500">
+                Buka : {metrics.foodcourtStatus.active}
+              </span>
+              <span className="font-semibold text-red-500">
+                Tutup : {metrics.foodcourtStatus.inactive}
+              </span>
+            </div>
+          }
         />
+
         <DashboardMetricCard
-          title="Pemilik Stand"
-          value={metrics.ownerCount}
-          description="Total registered owners"
-          icon={<Users className="h-5 w-5" />}
-          trend={null}
-          href="/admin/owners"
+          className="h-[250px]"
+          title="Status Stand"
+          link="/admin/foodcourts"
+          value={totalFoodCourts}
+          description="Status Stand Yang Tersedia"
+          data={[
+            {
+              name: "Aktif",
+              value: metrics.foodCourtCount.active,
+              fill: "#60a5fa",
+            },
+            {
+              name: "Tidak Aktif",
+              value: metrics.foodCourtCount.inactive,
+              fill: "#facc15",
+            },
+          ]}
+          extraContent={
+            <div className="flex justify-end gap-4 text-sm">
+              <span className="font-semibold text-blue-500">
+                Aktif : {metrics.foodCourtCount.active}
+              </span>
+              <span className="font-semibold text-yellow-500">
+                Tidak Aktif : {metrics.foodCourtCount.inactive}
+              </span>
+            </div>
+          }
+        />
+
+        <DashboardMetricCard
+          className="h-[250px]"
+          title="Owners Stand"
+          link="/admin/owners"
+          value={metrics.ownerCount.total}
+          description="Status Owner yang Memiliki Stand"
+          data={[
+            {
+              name: "Ada",
+              value: metrics.ownerCount.withFoodcourt,
+              fill: "#a78bfa",
+            },
+            {
+              name: "Tidak Ada",
+              value: metrics.ownerCount.withoutFoodcourt,
+              fill: "#22d3ee",
+            },
+          ]}
+          extraContent={
+            <div className="flex justify-end gap-4 text-sm">
+              <span className="font-semibold text-purple-500">
+                Ada : {metrics.ownerCount.withFoodcourt}
+              </span>
+              <span className="font-semibold text-cyan-500">
+                Tidak Ada : {metrics.ownerCount.withoutFoodcourt}
+              </span>
+            </div>
+          }
         />
       </div>
 
       <div className="w-full">
-        {/* Pending registrations */}
         <PendingRegistrationsCard pendingRegistrations={pendingRegistrations} />
       </div>
     </div>
