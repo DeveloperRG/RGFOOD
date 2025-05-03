@@ -81,6 +81,7 @@ model Foodcourt {
   address     String
   image       String?
   imagePublicId String?
+  category    CategoryType?
   isActive    Boolean  @default(true)
   status      FoodcourtStatus @default(BUKA)
   createdAt   DateTime @default(now())
@@ -91,7 +92,6 @@ model Foodcourt {
   creatorId String
   creator   User     @relation("FoodcourtCreator", fields: [creatorId], references: [id])
 
-  categories FoodcourtCategory[]
   menuItems          MenuItem[]
   orderItems         OrderItem[]
   ownerNotifications OwnerNotification[]
@@ -99,18 +99,6 @@ model Foodcourt {
 
   @@map("foodcourts")
   @@unique([ownerId])
-}
-
-model FoodcourtCategory {
-  id           String       @id @default(cuid())
-  category     CategoryType
-  foodcourtId  String
-  foodcourt    Foodcourt    @relation(fields: [foodcourtId], references: [id])
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  @@unique([foodcourtId, category])
-  @@map("foodcourt_categories")
 }
 
 model Table {

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { UtensilsIcon, QrCodeIcon, TruckIcon, Loader2 } from "lucide-react";

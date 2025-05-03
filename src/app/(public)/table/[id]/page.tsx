@@ -1,39 +1,35 @@
+// ~/src/app/(public)/table/[id]/page.tsx
+
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
 import Image from "next/image";
-import { Input } from "~/components/ui/input";
-import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
-import { Badge } from "~/components/ui/badge";
-import {
-  Loader2,
-  Search,
-  X,
-  ArrowRight,
-  ShoppingBag,
-  Tag,
-  Clock,
-} from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import { Search } from "lucide-react";
 
-interface Foodcourt {
+// Define types
+enum CategoryType {
+  MAKANAN_UTAMA = "MAKANAN_UTAMA",
+  MINUMAN = "MINUMAN",
+  CEMILAN = "CEMILAN",
+  MAKANAN_MANIS = "MAKANAN_MANIS",
+}
+
+enum FoodcourtStatus {
+  BUKA = "BUKA",
+  TUTUP = "TUTUP",
+}
+
+type Foodcourt = {
   id: string;
   name: string;
   description: string | null;
-  logo: string;
   address: string;
-  status: string; // Added status field
-  categories?: FoodcourtCategory[]; // Optional categories
-}
-
-interface FoodcourtCategory {
-  id: string;
-  name: string;
-  description: string | null;
-  displayOrder: number;
-}
+  image: string | null;
+  imagePublicId: string | null;
+  status: FoodcourtStatus;
+  category: CategoryType | null;
+};
 
 interface TableInfo {
   id: string;
@@ -47,30 +43,30 @@ interface TableInfo {
   hasActiveOrder: boolean;
 }
 
-export default function TablePage() {
-  const params = useParams();
-  const tableId = params.id as string;
+const categoryLabels = {
+  [CategoryType.MAKANAN_UTAMA]: "Main Dishes",
+  [CategoryType.MINUMAN]: "Drinks",
+  [CategoryType.CEMILAN]: "Snacks",
+  [CategoryType.MAKANAN_MANIS]: "Desserts",
+};
 
+const statusLabels = {
+  [FoodcourtStatus.BUKA]: "OPEN",
+  [FoodcourtStatus.TUTUP]: "CLOSED",
+};
+
+export default function FoodcourtsPage() {
+  const router = useRouter();
+  const { id: tableId } = useParams();
   const [foodcourts, setFoodcourts] = useState<Foodcourt[]>([]);
-  const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
+  const [filteredFoodcourts, setFilteredFoodcourts] = useState<Foodcourt[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(
+    [],
+  );
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredFoodcourts, setFilteredFoodcourts] = useState<Foodcourt[]>([]);
-  const [cartItemCount, setCartItemCount] = useState(0);
-  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
-
-  // Load cart item count
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const itemCount = cart.reduce(
-        (sum: number, item: any) => sum + item.quantity,
-        0,
-      );
-      setCartItemCount(itemCount);
-    }
-  }, []);
+  const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
 
   // Fetch table information
   useEffect(() => {
@@ -102,16 +98,13 @@ export default function TablePage() {
 
     if (tableId) {
       fetchTableInfo();
+      localStorage.setItem("tableId", tableId as string);
     }
   }, [tableId]);
 
-  // Store table ID in localStorage and fetch foodcourts
+  // Fetch foodcourts data
   useEffect(() => {
-    if (tableId) {
-      localStorage.setItem("tableId", tableId);
-    }
-
-    async function fetchFoodcourts() {
+    const fetchFoodcourts = async () => {
       try {
         setLoading(true);
         const response = await fetch("/api/public/foodcourt");
@@ -122,291 +115,246 @@ export default function TablePage() {
 
         const data = await response.json();
         console.log("Foodcourts data:", data);
-
-        // Add the Pexels image URL to all foodcourts
-        const updatedData = data.map((fc: Foodcourt) => ({
-          ...fc,
-          logo: "https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg",
-        }));
-
-        // Fetch categories for each foodcourt
-        const foodcourtsWithCategories = await Promise.all(
-          updatedData.map(async (foodcourt: Foodcourt) => {
-            try {
-              const categoryResponse = await fetch(
-                `/api/public/foodcourt/${foodcourt.id}/categories`,
-              );
-
-              if (categoryResponse.ok) {
-                const categories = await categoryResponse.json();
-                return { ...foodcourt, categories };
-              }
-
-              return foodcourt;
-            } catch (err) {
-              console.error(
-                `Error fetching categories for foodcourt ${foodcourt.id}:`,
-                err,
-              );
-              return foodcourt;
-            }
-          }),
-        );
-
-        // Log to check if logos are present in the data
-        foodcourtsWithCategories.forEach((fc: Foodcourt) => {
-          console.log(
-            `Foodcourt ${fc.name} has logo: ${fc.logo ? "Yes" : "No"}`,
-          );
-        });
-
-        setFoodcourts(foodcourtsWithCategories);
-        setFilteredFoodcourts(foodcourtsWithCategories);
+        setFoodcourts(data);
+        setFilteredFoodcourts(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError("Error loading foodcourts. Please try again.");
+        console.error(err);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchFoodcourts();
-  }, [tableId]);
+  }, []);
 
-  // Filter foodcourts based on search query
+  // Filter foodcourts based on selected categories and search query
   useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredFoodcourts(foodcourts);
-    } else {
-      const filtered = foodcourts.filter(
-        (foodcourt) =>
-          foodcourt.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (foodcourt.description &&
-            foodcourt.description
-              .toLowerCase()
-              .includes(searchQuery.toLowerCase())) ||
-          // Also search by category names
-          (foodcourt.categories &&
-            foodcourt.categories.some((category) =>
-              category.name.toLowerCase().includes(searchQuery.toLowerCase()),
-            )),
-      );
-      setFilteredFoodcourts(filtered);
-    }
-  }, [searchQuery, foodcourts]);
+    let filtered = [...foodcourts];
 
-  const handleImageError = (id: string) => {
-    setImgErrors((prev) => ({
-      ...prev,
-      [id]: true,
-    }));
+    // Apply category filter
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(
+        (foodcourt) =>
+          foodcourt.category && selectedCategories.includes(foodcourt.category),
+      );
+    }
+
+    // Apply search filter
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        (foodcourt) =>
+          foodcourt.name.toLowerCase().includes(query) ||
+          (foodcourt.description &&
+            foodcourt.description.toLowerCase().includes(query)) ||
+          foodcourt.address.toLowerCase().includes(query),
+      );
+    }
+
+    setFilteredFoodcourts(filtered);
+  }, [selectedCategories, foodcourts, searchQuery]);
+
+  // Toggle category selection
+  const toggleCategory = (category: CategoryType) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
+    );
   };
 
-  // Loading state
-  if (loading && foodcourts.length === 0) {
+  // Navigate to foodcourt menu page
+  const navigateToFoodcourtMenu = (foodcourtId: string) => {
+    router.push(`/table/${tableId}/foodcourt/${foodcourtId}`);
+  };
+
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500">Error: {error}</p>
-          <Button className="mt-4" onClick={() => window.location.reload()}>
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="max-w-md rounded-lg border border-red-200 bg-red-50 p-6">
+          <h2 className="mb-2 text-lg font-semibold text-red-700">Error</h2>
+          <p className="text-red-600">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-md bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+          >
             Try Again
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
-      {/* Table Info Banner */}
-      <div
-        className="p-20 text-center text-white"
-        style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1400&q=80')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <div className="flex flex-col items-center justify-center">
-          <span className="text-lg font-medium">
-            Table #{tableInfo?.tableNumber || tableId}
-          </span>
-
-          {tableInfo?.hasActiveOrder && (
-            <span className="mt-1 rounded-full bg-green-200 px-2 py-0.5 text-sm text-green-800">
-              Order in progress
-            </span>
-          )}
-
-          {tableInfo?.activeSession && (
-            <span className="mt-1 text-xs">
-              Session started:{" "}
-              {new Date(
-                tableInfo.activeSession.sessionStart,
-              ).toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-
-        <p className="text-bold mt-1">Pesanan Kamu Akan Dikirim ke Sini</p>
-
-      </div>
-      {/* Search - Diletakkan setelah banner */}
-      <div className="relative z-10 mx-auto -mt-10 max-w-2xl p-5">
-        <div className="relative">
-          <Input
-            placeholder="lagi mau makan apa?"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-gray-200 pl-10 shadow-lg"
-
-          />
-          <Search className="absolute top-2 right-20 left-3 h-5 w-5 text-gray-400" />
-          {searchQuery && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-1.5 right-1 h-5 w-6"
-              onClick={() => setSearchQuery("")}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Foodcourt List */}
-
-      <div className="mx-auto max-w-4xl space-y-4 px-4">
-        {filteredFoodcourts.length > 0 ? (
-          filteredFoodcourts.map((foodcourt) => (
-            <div
-              key={foodcourt.id}
-              className="relative rounded-xl bg-green-600 pb-4 shadow-md"
-            >
-              <Link
-                href={`/table/${tableId}/foodcourt/${foodcourt.id}`}
-                className="block"
-              >
-                <Card className="overflow-hidden bg-white transition-shadow hover:shadow-lg">
-                  <CardContent className="p-0">
-                    <div className="flex items-center">
-                      <div className="ml-4 h-24 w-24 flex-shrink-0 overflow-hidden border-2 border-solid bg-gray-200">
-                        {foodcourt.logo &&
-                        foodcourt.logo.trim() !== "" &&
-                        !imgErrors[foodcourt.id] ? (
-                          // Menggunakan next/image untuk optimasi
-                          <div className="sticky">
-                            <Image
-                              src={foodcourt.logo}
-                              alt={foodcourt.name}
-                              width={96}
-                              height={96}
-                              className="h-28 w-30 object-cover"
-                              onError={() => handleImageError(foodcourt.id)}
-                              unoptimized={!foodcourt.logo.startsWith("/")}
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-gray-400">
-                            <ShoppingBag className="h-8 w-8" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-1 items-center p-4">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold">{foodcourt.name}</h3>
-                            {/* Status Badge */}
-                            <Badge
-                              className={`ml-2 flex items-center ${
-                                foodcourt.status === "BUKA"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                  : "bg-red-100 text-red-800 hover:bg-red-100"
-                              }`}
-                            >
-                              <Clock className="mr-1 h-3 w-3" />
-                              {foodcourt.status === "BUKA" ? "Buka" : "Tutup"}
-                            </Badge>
-                          </div>
-                          <p className="mt-1 line-clamp-1 text-sm text-gray-500">
-                            {foodcourt.description ||
-                              "No description available"}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-400">
-                            {foodcourt.address || "Address not available"}
-                          </p>
-
-                          {/* Display Foodcourt Categories */}
-                          {foodcourt.categories &&
-                            foodcourt.categories.length > 0 && (
-                              <div className="mt-2 flex flex-wrap gap-1">
-                                {foodcourt.categories
-                                  .slice(0, 3)
-                                  .map((category) => (
-                                    <Badge
-                                      key={category.id}
-                                      variant="outline"
-                                      className="bg-gray-100 text-xs"
-                                    >
-                                      <Tag className="mr-1 h-3 w-3" />
-                                      {category.name}
-                                    </Badge>
-                                  ))}
-                                {foodcourt.categories.length > 3 && (
-                                  <Badge
-                                    variant="outline"
-                                    className="bg-gray-100 text-xs"
-                                  >
-                                    +{foodcourt.categories.length - 3} more
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
-                        </div>
-                        <ArrowRight className="text-green-500" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-8">
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">Foodcourts</h1>
+          {tableInfo && (
+            <div className="mb-2 inline-block rounded-lg bg-blue-50 px-3 py-1 text-blue-700">
+              Table #{tableInfo.tableNumber}
             </div>
-          ))
-        ) : (
-          <Card className="p-8 text-center">
-            <p className="text-gray-500">
-              {searchQuery
-                ? `No foodcourts found matching "${searchQuery}"`
-                : "No foodcourts available at the moment."}
-            </p>
-            {searchQuery && (
-              <Button className="mt-4" onClick={() => setSearchQuery("")}>
-                Clear Search
-              </Button>
+          )}
+          <p className="text-gray-600">
+            Explore our available foodcourts and filter by category
+          </p>
+        </header>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Search by name, description or address..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Category Filters */}
+        <div className="mb-8">
+          <h2 className="mb-3 text-lg font-medium text-gray-800">
+            Filter by Category
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {Object.values(CategoryType).map((category) => (
+              <button
+                key={category}
+                onClick={() => toggleCategory(category)}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                  selectedCategories.includes(category)
+                    ? "bg-blue-600 text-white"
+                    : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {categoryLabels[category]}
+              </button>
+            ))}
+            {selectedCategories.length > 0 && (
+              <button
+                onClick={() => setSelectedCategories([])}
+                className="rounded-full bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300"
+              >
+                Clear Filters
+              </button>
             )}
-          </Card>
+          </div>
+        </div>
+
+        {/* Results Summary */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Showing {filteredFoodcourts.length} of {foodcourts.length}{" "}
+            foodcourts
+            {selectedCategories.length > 0 && (
+              <span>
+                {" "}
+                filtered by{" "}
+                {selectedCategories.map((c) => categoryLabels[c]).join(", ")}
+              </span>
+            )}
+            {searchQuery.trim() !== "" && (
+              <span> matching "{searchQuery.trim()}"</span>
+            )}
+          </p>
+        </div>
+
+        {/* Foodcourts Grid */}
+        {filteredFoodcourts.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredFoodcourts.map((foodcourt) => (
+              <div
+                key={foodcourt.id}
+                className="cursor-pointer overflow-hidden rounded-lg bg-white shadow-md transition-shadow hover:shadow-lg"
+                onClick={() => navigateToFoodcourtMenu(foodcourt.id)}
+              >
+                <div className="relative h-48">
+                  {foodcourt.image ? (
+                    <Image
+                      src={foodcourt.image}
+                      alt={foodcourt.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-200">
+                      <span className="text-gray-400">No image available</span>
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2">
+                    <span
+                      className={`inline-block rounded-full px-2 py-1 text-xs font-medium ${
+                        foodcourt.status === FoodcourtStatus.BUKA
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {statusLabels[foodcourt.status]}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="mb-1 text-lg font-semibold text-gray-900">
+                    {foodcourt.name}
+                  </h3>
+                  <p className="mb-3 text-sm text-gray-500">
+                    {foodcourt.address}
+                  </p>
+                  <p className="mb-4 line-clamp-2 text-sm text-gray-600">
+                    {foodcourt.description}
+                  </p>
+
+                  {foodcourt.category && (
+                    <div className="flex flex-wrap gap-1">
+                      <span className="inline-block rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700">
+                        {categoryLabels[foodcourt.category]}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-lg bg-white p-12 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+              <svg
+                className="h-8 w-8 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="mb-1 text-lg font-medium text-gray-900">
+              No foodcourts found
+            </h3>
+            <p className="text-gray-500">
+              Try changing or clearing your filters
+            </p>
+          </div>
         )}
       </div>
-      {/* Cart Button (if items in cart) */}
-      {cartItemCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 bg-white px-4 py-3 shadow-md">
-          <Link href="/cart">
-            <Button className="w-full bg-green-500 text-white hover:bg-green-600">
-              View Cart ({cartItemCount}{" "}
-              {cartItemCount === 1 ? "item" : "items"})
-            </Button>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

@@ -12,8 +12,10 @@ export async function GET(request: NextRequest) {
         name: true,
         description: true,
         address: true,
-        logo: true,
-        status: true, 
+        image: true,
+        imagePublicId: true,
+        category: true,
+        status: true,
       },
     });
 
