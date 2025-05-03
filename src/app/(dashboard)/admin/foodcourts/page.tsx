@@ -40,13 +40,13 @@ export default function FoodcourtsPage() {
   }, [statusFilter]);
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-0">
       <div className="mb-8">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Foodcourts</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Stand</h1>
             <p className="text-muted-foreground">
-              Manage all foodcourts in the system
+              Kelola semua stand yang terdaftar di sistem
             </p>
           </div>
         </div>

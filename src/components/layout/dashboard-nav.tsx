@@ -99,7 +99,7 @@ export function DashboardNav({ children, user }: DashboardNavProps) {
               pathname === "/admin/owners" || pathname.startsWith("/admin/owners/"),
         },
         {
-          name: "Setting",
+          name: "Pengaturan",
           icon: Settings,
           children: [
             {
@@ -126,14 +126,7 @@ export function DashboardNav({ children, user }: DashboardNavProps) {
           current:
               pathname === "/admin/tables" || pathname.startsWith("/admin/tables/"),
         },
-        {
-          name: "Laporan",
-          href: "/admin/reports",
-          icon: FileText,
-          current:
-              pathname === "/admin/reports" ||
-              pathname.startsWith("/admin/reports/"),
-        },
+
     );
   }
 

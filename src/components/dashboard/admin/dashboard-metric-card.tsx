@@ -53,9 +53,9 @@ export function DashboardMetricCard({
   const localizedData = data.map((entry) => ({
     ...entry,
     name:
-      entry.name === "Active"
+      entry.name === "Aktif"
         ? "Buka"
-        : entry.name === "Inactive"
+        : entry.name === "Tidak Aktif"
           ? "Tutup"
           : entry.name === "Aktif"
             ? "Aktif"

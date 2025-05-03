@@ -466,7 +466,7 @@ export default function FoodcourtPage() {
                     variant={foodcourt.isActive ? "outline" : "destructive"}
                     className="self-start"
                   >
-                    {foodcourt.isActive ? "ACTIVE" : "INACTIVE"}
+                    {foodcourt.isActive ? "Aktif" : "Tidak Aktif"}
                   </Badge>
                 </div>
               </div>
