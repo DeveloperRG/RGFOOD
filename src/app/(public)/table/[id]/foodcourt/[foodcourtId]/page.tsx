@@ -1,590 +1,899 @@
-// ~/src/app/(public)/table/[id]/foodcourt/[foodcourtId]/page.tsx
-
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+import Image from "next/image";
+import { useRouter, useParams } from "next/navigation";
+import { ArrowLeft, Search, ShoppingCart, Minus, Plus, X } from "lucide-react";
 import Link from "next/link";
-import {
-  ChevronLeft,
-  Search,
-  ShoppingBag,
-  Plus,
-  Loader2,
-  X,
-  Tag,
-} from "lucide-react";
-import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Card, CardContent } from "~/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { Badge } from "~/components/ui/badge";
 
-interface MenuCategory {
-  id: string;
-  name: string;
-  description: string | null;
-  displayOrder: number;
-  itemCount: number;
+// Define types
+enum CategoryType {
+  MAKANAN_UTAMA = "MAKANAN_UTAMA",
+  MINUMAN = "MINUMAN",
+  CEMILAN = "CEMILAN",
+  MAKANAN_MANIS = "MAKANAN_MANIS",
 }
 
-interface FoodcourtCategory {
-  id: string;
-  name: string;
-  description: string | null;
-  displayOrder: number;
+enum FoodcourtStatus {
+  BUKA = "BUKA",
+  TUTUP = "TUTUP",
 }
 
-interface MenuItem {
+type Foodcourt = {
+  id: string;
+  name: string;
+  status: FoodcourtStatus;
+};
+
+type MenuItem = {
   id: string;
   name: string;
   description: string | null;
   price: number;
-  imageUrl: string | null;
+  image: string | null;
+  imagePublicId: string | null;
+  isAvailable: boolean;
   categoryId: string | null;
-  category: {
-    id: string;
-    name: string;
-  } | null;
-}
+};
 
-interface Foodcourt {
+interface TableInfo {
   id: string;
-  name: string;
-  description: string | null;
-  address: string;
-  logo: string | null;
+  tableNumber: string;
+  capacity: number;
+  isAvailable: boolean;
+  activeSession: {
+    id: string;
+    sessionStart: string;
+  } | null;
+  hasActiveOrder: boolean;
 }
 
-export default function FoodcourtDetailPage() {
-  const params = useParams();
+type CartItem = {
+  id: string;
+  menuItemId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  foodcourtId: string;
+  foodcourtName: string;
+  specialInstructions?: string;
+};
+
+const categoryLabels = {
+  [CategoryType.MAKANAN_UTAMA]: "Main Dishes",
+  [CategoryType.MINUMAN]: "Drinks",
+  [CategoryType.CEMILAN]: "Snacks",
+  [CategoryType.MAKANAN_MANIS]: "Desserts",
+};
+
+export default function FoodcourtMenuPage() {
   const router = useRouter();
-  const tableId = params.id as string;
-  const foodcourtId = params.foodcourtId as string;
+  const { id: tableId, foodcourtId } = useParams();
 
   const [foodcourt, setFoodcourt] = useState<Foodcourt | null>(null);
-  const [foodcourtCategories, setFoodcourtCategories] = useState<
-    FoodcourtCategory[]
-  >([]);
-  const [menuCategories, setMenuCategories] = useState<MenuCategory[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [filteredMenuItems, setFilteredMenuItems] = useState<MenuItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [categoryLoading, setCategoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
   const [cartCount, setCartCount] = useState(0);
 
-  // Function to add item to cart
-  const addToCart = (item: MenuItem) => {
-    if (typeof window !== "undefined") {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+  // New states for quantity controls and popup
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>(
+    {},
+  );
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(
+    null,
+  );
+  const [showPopup, setShowPopup] = useState(false);
+  const [specialInstructions, setSpecialInstructions] = useState("");
 
-      // Check if item already exists in cart
-      const existingItemIndex = cart.findIndex(
-        (cartItem: any) => cartItem.id === item.id,
-      );
+  // New state to track which items are in the cart
+  const [itemsInCart, setItemsInCart] = useState<Record<string, boolean>>({});
 
-      if (existingItemIndex !== -1) {
-        // Increment quantity if item already exists
-        cart[existingItemIndex].quantity += 1;
-      } else {
-        // Add new item with quantity 1
-        cart.push({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: 1,
-          foodcourtId,
-          tableId,
-          imageUrl: item.imageUrl,
-          categoryName: item.category?.name || "Uncategorized",
-        });
-      }
-
-      localStorage.setItem("cart", JSON.stringify(cart));
-      updateCartCount();
-    }
-  };
-
-  // Update cart count from localStorage
-  const updateCartCount = () => {
-    if (typeof window !== "undefined") {
-      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const count = cart.reduce(
-        (sum: number, item: any) => sum + item.quantity,
-        0,
-      );
-      setCartCount(count);
-    }
-  };
-
-  // Fetch foodcourt details
+  // Initialize quantities for each menu item and track which items are in cart
   useEffect(() => {
-    async function fetchFoodcourt() {
+    if (menuItems.length === 0) return;
+
+    const quantities: Record<string, number> = {};
+    const inCart: Record<string, boolean> = {};
+
+    menuItems.forEach((item) => {
+      quantities[item.id] = 1;
+      inCart[item.id] = false;
+    });
+
+    // Check if items are already in cart
+    const cart = localStorage.getItem("cart");
+    if (cart) {
+      try {
+        const cartData = JSON.parse(cart);
+        if (cartData.items && cartData.items.length > 0) {
+          cartData.items.forEach((item: CartItem) => {
+            if (item.menuItemId) {
+              quantities[item.menuItemId] = item.quantity;
+              inCart[item.menuItemId] = true;
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error parsing cart data:", err);
+      }
+    }
+
+    setItemQuantities(quantities);
+    setItemsInCart(inCart);
+  }, [menuItems]);
+
+  // Fetch table information
+  useEffect(() => {
+    async function fetchTableInfo() {
+      try {
+        const response = await fetch(`/api/public/tables/${tableId}`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch table information");
+        }
+
+        const data = await response.json();
+        setTableInfo(data);
+      } catch (err) {
+        console.error("Error fetching table info:", err);
+      }
+    }
+
+    if (tableId) {
+      fetchTableInfo();
+    }
+  }, [tableId]);
+
+  // Fetch cart count and update states based on cart changes
+  const updateCartState = useCallback(() => {
+    const cart = localStorage.getItem("cart");
+    if (!cart) {
+      setCartCount(0);
+      // Reset all items to not in cart - but don't do this if we don't have menuItems yet
+      if (menuItems.length > 0) {
+        const newInCart: Record<string, boolean> = {};
+        menuItems.forEach((item) => {
+          newInCart[item.id] = false;
+        });
+        setItemsInCart(newInCart);
+      }
+      return;
+    }
+
+    try {
+      const cartData = JSON.parse(cart);
+      const itemCount = cartData.items
+        ? cartData.items.reduce(
+            (sum: number, item: CartItem) => sum + item.quantity,
+            0,
+          )
+        : 0;
+      setCartCount(itemCount);
+
+      // Only update if we have menuItems
+      if (menuItems.length > 0) {
+        // Update which items are in cart
+        const newInCart: Record<string, boolean> = {};
+        const newQuantities = { ...itemQuantities };
+
+        menuItems.forEach((item) => {
+          newInCart[item.id] = false;
+        });
+
+        if (cartData.items) {
+          cartData.items.forEach((item: CartItem) => {
+            if (item.menuItemId) {
+              newInCart[item.menuItemId] = true;
+              newQuantities[item.menuItemId] = item.quantity;
+            }
+          });
+        }
+
+        setItemsInCart(newInCart);
+        setItemQuantities(newQuantities);
+      }
+    } catch (err) {
+      console.error("Error parsing cart data:", err);
+    }
+  }, [menuItems.length]); // Only depend on menuItems.length, not the entire array or itemQuantities
+
+  // Setup storage event listener and initial cart state
+  useEffect(() => {
+    if (menuItems.length === 0) return;
+
+    // Initial update
+    updateCartState();
+
+    // Set up event listener for storage changes
+    window.addEventListener("storage", updateCartState);
+
+    return () => {
+      window.removeEventListener("storage", updateCartState);
+    };
+  }, [menuItems.length, updateCartState]); // Only depend on menuItems.length, not the entire array
+
+  // Fetch menu items
+  useEffect(() => {
+    async function fetchMenuItems() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/public/foodcourt/${foodcourtId}`);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch foodcourt details");
-        }
-
-        const data = await response.json();
-        setFoodcourt(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      }
-    }
-
-    fetchFoodcourt();
-  }, [foodcourtId]);
-
-  // Fetch foodcourt categories (what the foodcourt specializes in)
-  useEffect(() => {
-    async function fetchFoodcourtCategories() {
-      try {
         const response = await fetch(
-          `/api/public/foodcourt/${foodcourtId}/categories`,
+          `/api/public/foodcourt/${foodcourtId}/menu`,
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch foodcourt categories");
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to fetch menu items");
         }
 
         const data = await response.json();
-        setFoodcourtCategories(data);
+        setFoodcourt(data.foodcourt);
+        setMenuItems(data.menuItems);
+        setFilteredMenuItems(data.menuItems);
       } catch (err) {
-        console.error("Error fetching foodcourt categories:", err);
-        // Not setting error state as this is not critical
-      }
-    }
-
-    fetchFoodcourtCategories();
-  }, [foodcourtId]);
-
-  // Fetch menu categories
-  useEffect(() => {
-    async function fetchMenuCategories() {
-      try {
-        const response = await fetch(
-          `/api/public/foodcourt/${foodcourtId}/menu/categories`,
+        setError(
+          err instanceof Error ? err.message : "Failed to load menu items",
         );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch menu categories");
-        }
-
-        const data = await response.json();
-        setMenuCategories(data);
-
-        // If we have categories and no selected category yet, select the first one
-        if (data.length > 0 && !selectedCategory) {
-          setSelectedCategory(data[0].id);
-        }
-      } catch (err) {
-        console.error("Error fetching menu categories:", err);
-        // We won't set error state here as we can still show menu items without categories
+        console.error(err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchMenuCategories();
-  }, [foodcourtId, selectedCategory]);
-
-  // Fetch menu items when category changes
-  useEffect(() => {
-    async function fetchMenuItems() {
-      try {
-        setCategoryLoading(true);
-        let url = `/api/public/foodcourt/${foodcourtId}/menu`;
-
-        if (selectedCategory) {
-          url += `?categoryId=${selectedCategory}`;
-        }
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch menu items");
-        }
-
-        const data = await response.json();
-        setMenuItems(data);
-      } catch (err) {
-        console.error("Error fetching menu items:", err);
-        setMenuItems([]);
-      } finally {
-        setCategoryLoading(false);
-      }
-    }
-
-    // Only fetch if we have a foodcourt and it's not in loading state
-    if (foodcourtId && !loading) {
+    if (foodcourtId) {
       fetchMenuItems();
     }
-  }, [foodcourtId, selectedCategory, loading]);
+  }, [foodcourtId]);
 
-  // Update cart count on component mount
+  // Filter menu items based on selected category and search query
   useEffect(() => {
-    updateCartCount();
-  }, []);
+    let filtered = [...menuItems];
 
-  // Filter menu items based on search
-  const filteredItems =
-    searchQuery.trim() === ""
-      ? menuItems
-      : menuItems.filter(
-          (item) =>
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (item.description &&
-              item.description
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase())),
+    // Apply category filter
+    if (selectedCategory) {
+      filtered = filtered.filter(
+        (item) => item.categoryId === selectedCategory,
+      );
+    }
+
+    // Apply search filter
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        (item) =>
+          item.name.toLowerCase().includes(query) ||
+          (item.description && item.description.toLowerCase().includes(query)),
+      );
+    }
+
+    setFilteredMenuItems(filtered);
+  }, [selectedCategory, menuItems, searchQuery]);
+
+  // Handle quantity change
+  const changeQuantity = (itemId: string, change: number) => {
+    setItemQuantities((prev) => {
+      const newQuantity = Math.max(0, (prev[itemId] || 1) + change);
+
+      // If quantity becomes 0, remove from cart
+      if (newQuantity === 0) {
+        removeFromCart(itemId);
+        return { ...prev, [itemId]: 1 }; // Reset to 1 for next time
+      }
+
+      // Otherwise update the cart with new quantity
+      updateCartItemQuantity(itemId, newQuantity);
+      return { ...prev, [itemId]: newQuantity };
+    });
+  };
+
+  // Open menu item detail popup
+  const openMenuItemPopup = (menuItem: MenuItem) => {
+    setSelectedMenuItem(menuItem);
+    setSpecialInstructions("");
+    setShowPopup(true);
+    // Ensure body doesn't scroll when popup is open
+    document.body.style.overflow = "hidden";
+  };
+
+  // Close menu item detail popup
+  const closeMenuItemPopup = () => {
+    setShowPopup(false);
+    setSelectedMenuItem(null);
+    document.body.style.overflow = "auto";
+  };
+
+  // Add to cart function
+  const addToCart = (
+    menuItem: MenuItem,
+    quantity: number = 1,
+    instructions: string = "",
+  ) => {
+    if (!foodcourt) return;
+
+    try {
+      // Get existing cart or create new one
+      const existingCart = localStorage.getItem("cart");
+      const cart = existingCart
+        ? JSON.parse(existingCart)
+        : {
+            tableId: tableId,
+            items: [],
+          };
+
+      // Check if item already exists in cart
+      const existingItemIndex = cart.items.findIndex(
+        (item: CartItem) => item.menuItemId === menuItem.id,
+      );
+
+      if (existingItemIndex !== -1) {
+        // Update quantity if item exists
+        cart.items[existingItemIndex].quantity = quantity;
+        if (instructions) {
+          cart.items[existingItemIndex].specialInstructions = instructions;
+        }
+      } else {
+        // Add new item to cart
+        const cartItem: CartItem = {
+          id: `${Date.now()}`,
+          menuItemId: menuItem.id,
+          name: menuItem.name,
+          price: menuItem.price,
+          quantity: quantity,
+          foodcourtId: foodcourt.id,
+          foodcourtName: foodcourt.name,
+          specialInstructions: instructions || undefined,
+        };
+        cart.items.push(cartItem);
+      }
+
+      // Save cart to localStorage
+      localStorage.setItem("cart", JSON.stringify(cart));
+
+      // Manual update of cart count instead of relying on storage event
+      const newCartCount = cart.items.reduce(
+        (sum: number, item: CartItem) => sum + item.quantity,
+        0,
+      );
+      setCartCount(newCartCount);
+
+      // Update items in cart state manually
+      setItemsInCart((prev) => ({
+        ...prev,
+        [menuItem.id]: true,
+      }));
+
+      // Trigger storage event for other components
+      window.dispatchEvent(new Event("storage"));
+
+      // Close popup if open
+      if (showPopup) {
+        closeMenuItemPopup();
+      }
+    } catch (err) {
+      console.error("Error adding item to cart:", err);
+      alert("Failed to add item to cart. Please try again.");
+    }
+  };
+
+  // Update cart item quantity
+  const updateCartItemQuantity = (menuItemId: string, quantity: number) => {
+    try {
+      const existingCart = localStorage.getItem("cart");
+      if (!existingCart) return;
+
+      const cart = JSON.parse(existingCart);
+      const existingItemIndex = cart.items.findIndex(
+        (item: CartItem) => item.menuItemId === menuItemId,
+      );
+
+      if (existingItemIndex !== -1) {
+        cart.items[existingItemIndex].quantity = quantity;
+
+        // Save cart to localStorage
+        localStorage.setItem("cart", JSON.stringify(cart));
+
+        // Manual update of cart count
+        const newCartCount = cart.items.reduce(
+          (sum: number, item: CartItem) => sum + item.quantity,
+          0,
         );
+        setCartCount(newCartCount);
 
-  // Loading state
+        // Trigger storage event for other components
+        window.dispatchEvent(new Event("storage"));
+      }
+    } catch (err) {
+      console.error("Error updating cart item quantity:", err);
+    }
+  };
+
+  // Remove item from cart
+  const removeFromCart = (menuItemId: string) => {
+    try {
+      const existingCart = localStorage.getItem("cart");
+      if (!existingCart) return;
+
+      const cart = JSON.parse(existingCart);
+      const updatedItems = cart.items.filter(
+        (item: CartItem) => item.menuItemId !== menuItemId,
+      );
+
+      cart.items = updatedItems;
+
+      // Save cart to localStorage
+      localStorage.setItem("cart", JSON.stringify(cart));
+
+      // Manual update of cart count and items in cart
+      const newCartCount = cart.items.reduce(
+        (sum: number, item: CartItem) => sum + item.quantity,
+        0,
+      );
+      setCartCount(newCartCount);
+
+      // Update items in cart state manually
+      setItemsInCart((prev) => ({
+        ...prev,
+        [menuItemId]: false,
+      }));
+
+      // Trigger storage event for other components
+      window.dispatchEvent(new Event("storage"));
+    } catch (err) {
+      console.error("Error removing item from cart:", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-500">Error: {error}</p>
-          <Button
-            className="mt-4"
-            onClick={() => router.push(`/table/${tableId}`)}
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="max-w-md rounded-lg border border-red-200 bg-red-50 p-6">
+          <h2 className="mb-2 text-lg font-semibold text-red-700">Error</h2>
+          <p className="text-red-600">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-md bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
           >
-            Back to Foodcourts
-          </Button>
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
-  // Default tab value when no categories are available
-  const defaultTabValue = "";
-
-  // Find the current selected category or use the first one if available
-  const currentTabValue =
-    selectedCategory ||
-    (menuCategories.length > 0 ? menuCategories[0]?.id : defaultTabValue);
-
-  return (
-    <div className="min-h-screen bg-gray-50 pb-28">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white p-4 shadow-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <div className="flex items-center">
-            <Link href={`/table/${tableId}`}>
-              <Button variant="ghost" size="icon" className="mr-2">
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
+  // If foodcourt is closed
+  if (foodcourt && foodcourt.status === FoodcourtStatus.TUTUP) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-6 flex items-center">
+            <Link
+              href={`/table/${tableId}`}
+              className="mr-4 rounded-full p-2 hover:bg-gray-100"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
             </Link>
-            {!isSearchActive && foodcourt && (
-              <h1 className="text-lg font-semibold">{foodcourt.name}</h1>
-            )}
+            <h1 className="text-2xl font-bold text-gray-900">
+              {foodcourt.name}
+            </h1>
           </div>
 
-          <div className="flex items-center gap-2">
-            {isSearchActive ? (
-              <div className="relative w-56">
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search menu..."
-                  className="w-full"
-                  autoFocus
+          <div className="flex flex-col items-center justify-center rounded-lg bg-yellow-50 p-12 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
+              <svg
+                className="h-8 w-8 text-yellow-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-1 right-1 h-7 w-7"
-                  onClick={() => {
-                    setIsSearchActive(false);
-                    setSearchQuery("");
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsSearchActive(true)}
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-                <Link href="/cart">
-                  <Button variant="ghost" size="icon" className="relative">
-                    <ShoppingBag className="h-5 w-5" />
-                    {cartCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-xs text-white">
-                        {cartCount}
-                      </span>
-                    )}
-                  </Button>
-                </Link>
-              </>
-            )}
+              </svg>
+            </div>
+            <h3 className="mb-1 text-lg font-medium text-gray-900">
+              This foodcourt is currently closed
+            </h3>
+            <p className="text-gray-600">
+              Please check back later when the foodcourt is open
+            </p>
+            <Link
+              href={`/table/${tableId}`}
+              className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
+            >
+              Back to Foodcourts
+            </Link>
           </div>
         </div>
-      </header>
+      </div>
+    );
+  }
 
-      {/* Foodcourt Details with FoodcourtCategories */}
-      {!isSearchActive && foodcourt && (
-        <div className="bg-white p-4 shadow-sm">
-          <div className="mx-auto max-w-6xl">
-            <div className="flex items-center gap-4">
-              {foodcourt.logo ? (
-                <div className="h-20 w-20 overflow-hidden rounded-lg">
-                  <img
-                    src={foodcourt.logo}
-                    alt={foodcourt.name}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-100">
-                  <ShoppingBag className="h-8 w-8 text-gray-400" />
-                </div>
-              )}
-
+  return (
+    <div className="min-h-screen bg-gray-50 pb-24">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white shadow-sm">
+        <div className="mx-auto max-w-7xl px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Link
+                href={`/table/${tableId}`}
+                className="mr-3 rounded-full p-2 hover:bg-gray-100"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-600" />
+              </Link>
               <div>
-                <h2 className="text-xl font-semibold">{foodcourt.name}</h2>
-                {foodcourt.description && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    {foodcourt.description}
+                <h1 className="text-xl font-bold text-gray-900">
+                  {foodcourt?.name}
+                </h1>
+                {tableInfo && (
+                  <p className="text-sm text-gray-500">
+                    Table #{tableInfo.tableNumber}
                   </p>
                 )}
-                <p className="mt-1 text-xs text-gray-400">
-                  {foodcourt.address}
-                </p>
-                <div className="mt-2 flex items-center">
-                  <span className="mr-2 inline-flex items-center rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                    Table #{tableId}
-                  </span>
+              </div>
+            </div>
+            <Link
+              href={`/table/${tableId}/cart`}
+              className="relative rounded-full bg-blue-50 p-2"
+            >
+              <ShoppingCart className="h-6 w-6 text-blue-600" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          </div>
+        </div>
+      </div>
 
-                  {/* Display Foodcourt Categories */}
-                  {foodcourtCategories.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {foodcourtCategories.map((category) => (
-                        <Badge
-                          key={category.id}
-                          variant="outline"
-                          className="bg-gray-100"
-                        >
-                          <Tag className="mr-1 h-3 w-3" />
-                          {category.name}
-                        </Badge>
-                      ))}
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="Search menu items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Category Filters */}
+        <div className="mb-8 overflow-x-auto">
+          <div className="flex space-x-2 pb-2">
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                selectedCategory === null
+                  ? "bg-blue-600 text-white"
+                  : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              All Items
+            </button>
+            {Object.entries(CategoryType).map(([key, value]) => (
+              <button
+                key={key}
+                onClick={() => setSelectedCategory(value)}
+                className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === value
+                    ? "bg-blue-600 text-white"
+                    : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {categoryLabels[value as CategoryType]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Results Summary */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Showing {filteredMenuItems.length} of {menuItems.length} menu items
+            {selectedCategory && (
+              <span>
+                {" "}
+                in {categoryLabels[selectedCategory as CategoryType]}
+              </span>
+            )}
+            {searchQuery.trim() !== "" && (
+              <span> matching "{searchQuery.trim()}"</span>
+            )}
+          </p>
+        </div>
+
+        {/* Menu Items Grid */}
+        {filteredMenuItems.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredMenuItems.map((menuItem) => (
+              <div
+                key={menuItem.id}
+                className="overflow-hidden rounded-lg bg-white shadow-md transition-shadow hover:shadow-lg"
+              >
+                <div
+                  className="relative h-48 cursor-pointer"
+                  onClick={() => openMenuItemPopup(menuItem)}
+                >
+                  {menuItem.image ? (
+                    <Image
+                      src={menuItem.image}
+                      alt={menuItem.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gray-200">
+                      <span className="text-gray-400">No image available</span>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+                <div className="p-4">
+                  <h3
+                    className="mb-1 cursor-pointer text-lg font-semibold text-gray-900"
+                    onClick={() => openMenuItemPopup(menuItem)}
+                  >
+                    {menuItem.name}
+                  </h3>
+                  <p
+                    className="mb-3 line-clamp-2 cursor-pointer text-sm text-gray-600"
+                    onClick={() => openMenuItemPopup(menuItem)}
+                  >
+                    {menuItem.description || "No description available"}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-bold text-blue-600">
+                      ${menuItem.price}
+                    </span>
 
-      {/* Menu Categories Tabs (only show if not searching and have categories) */}
-      {!isSearchActive && menuCategories.length > 0 && (
-        <div className="sticky top-16 z-10 bg-white shadow-sm">
-          <div className="mx-auto max-w-6xl">
-            <div className="overflow-x-auto">
-              <Tabs
-                value={currentTabValue}
-                onValueChange={setSelectedCategory}
-                className="w-full"
-                defaultValue={
-                  menuCategories.length > 0
-                    ? menuCategories[0]?.id
-                    : defaultTabValue
-                }
-              >
-                <div className="px-4">
-                  <TabsList className="h-12 w-full justify-start gap-2 rounded-none border-b bg-transparent p-0">
-                    {menuCategories.map((category) => (
-                      <TabsTrigger
-                        key={category.id}
-                        value={category.id}
-                        className="h-10 rounded-md border border-transparent data-[state=active]:border-green-500 data-[state=active]:bg-green-50 data-[state=active]:text-green-700 data-[state=active]:shadow-none"
-                      >
-                        {category.name}
-                        <span className="ml-1 text-xs">
-                          ({category.itemCount})
-                        </span>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </div>
-              </Tabs>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Menu Items */}
-      <div className="mx-auto max-w-6xl p-4">
-        {categoryLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-green-500" />
-          </div>
-        ) : isSearchActive ? (
-          // Show search results
-          <>
-            <h3 className="mb-4 text-lg font-medium">
-              {filteredItems.length > 0
-                ? `Search results for "${searchQuery}"`
-                : `No results for "${searchQuery}"`}
-            </h3>
-
-            {filteredItems.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {filteredItems.map((item) => (
-                  <MenuItemCard
-                    key={item.id}
-                    item={item}
-                    onAddToCart={() => addToCart(item)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="text-gray-500">
-                  No menu items found matching your search.
-                </p>
-                <Button className="mt-4" onClick={() => setSearchQuery("")}>
-                  Clear Search
-                </Button>
-              </div>
-            )}
-          </>
-        ) : (
-          // Show category content
-          <div className="space-y-6">
-            {menuCategories.length > 0 && selectedCategory ? (
-              // Find and display the selected category
-              menuCategories
-                .filter((category) => category.id === selectedCategory)
-                .map((category) => (
-                  <div key={category.id}>
-                    <div className="mb-4">
-                      <h2 className="text-xl font-semibold">{category.name}</h2>
-                      {category.description && (
-                        <p className="mt-1 text-sm text-gray-500">
-                          {category.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {filteredItems.length > 0 ? (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {filteredItems.map((item) => (
-                          <MenuItemCard
-                            key={item.id}
-                            item={item}
-                            onAddToCart={() => addToCart(item)}
-                          />
-                        ))}
+                    {/* Add to Cart or Quantity Controls */}
+                    {itemsInCart[menuItem.id] ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex items-center rounded-md border border-gray-300">
+                          <button
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              changeQuantity(menuItem.id, -1);
+                            }}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="px-2">
+                            {itemQuantities[menuItem.id] || 1}
+                          </span>
+                          <button
+                            className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              changeQuantity(menuItem.id, 1);
+                            }}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <div className="py-8 text-center">
-                        <p className="text-gray-500">
-                          No menu items available in this category.
-                        </p>
-                      </div>
+                      <button
+                        className="rounded-md bg-blue-600 px-3 py-1 text-white transition-colors hover:bg-blue-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(menuItem);
+                        }}
+                        disabled={!menuItem.isAvailable}
+                      >
+                        Add
+                      </button>
                     )}
                   </div>
-                ))
-            ) : (
-              <div className="py-8 text-center">
-                <p className="text-gray-500">
-                  {menuCategories.length === 0
-                    ? "No menu categories available."
-                    : "Please select a category to view menu items."}
-                </p>
+                </div>
               </div>
-            )}
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-lg bg-white p-12 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+              <svg
+                className="h-8 w-8 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="mb-1 text-lg font-medium text-gray-900">
+              No menu items found
+            </h3>
+            <p className="text-gray-500">
+              Try changing or clearing your filters
+            </p>
           </div>
         )}
       </div>
 
-      {/* Cart Button */}
+      {/* Footer with cart navigation button */}
       {cartCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 bg-white px-4 py-3 shadow-md">
-          <Link href="/cart">
-            <Button className="w-full bg-green-500 text-white hover:bg-green-600">
-              View Cart ({cartCount} {cartCount === 1 ? "item" : "items"})
-            </Button>
-          </Link>
+        <div className="fixed bottom-0 left-0 z-30 w-full bg-white p-4 shadow-md">
+          <div className="mx-auto max-w-7xl">
+            <Link
+              href={`/table/${tableId}/cart`}
+              className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-center font-medium text-white hover:bg-blue-700"
+            >
+              <ShoppingCart className="mr-2 h-5 w-5" />
+              View Cart ({cartCount} items)
+            </Link>
+          </div>
         </div>
       )}
-    </div>
-  );
-}
 
-// Menu Item Card Component
-function MenuItemCard({
-  item,
-  onAddToCart,
-}: {
-  item: MenuItem;
-  onAddToCart: () => void;
-}) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-0">
-        <div className="flex">
-          {item.imageUrl ? (
-            <div className="relative h-24 w-24 bg-gray-100">
-              <img
-                src={item.imageUrl}
-                alt={item.name}
-                className="h-full w-full object-cover"
-              />
+      {/* Menu Item Detail Popup */}
+      {showPopup && selectedMenuItem && (
+        <div
+          className="bg-opacity-50 fixed inset-0 z-50 flex items-end bg-black"
+          onClick={closeMenuItemPopup}
+        >
+          <div
+            className="animate-slide-up w-full rounded-t-xl bg-white p-4 transition-transform duration-300"
+            style={{ maxHeight: "85vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <div className="mb-2 flex justify-end">
+              <button
+                onClick={closeMenuItemPopup}
+                className="rounded-full p-1 hover:bg-gray-100"
+              >
+                <X className="h-6 w-6 text-gray-600" />
+              </button>
             </div>
-          ) : (
-            <div className="flex h-24 w-24 items-center justify-center bg-gray-100">
-              <span className="text-gray-400">No Image</span>
-            </div>
-          )}
 
-          <div className="flex flex-1 p-3">
-            <div className="flex-1">
-              <h3 className="font-medium">{item.name}</h3>
-              {item.description && (
-                <p className="mt-1 line-clamp-2 text-xs text-gray-500">
-                  {item.description}
-                </p>
+            {/* Item image */}
+            <div className="relative mb-4 h-64 w-full overflow-hidden rounded-lg">
+              {selectedMenuItem.image ? (
+                <Image
+                  src={selectedMenuItem.image}
+                  alt={selectedMenuItem.name}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gray-200">
+                  <span className="text-gray-400">No image available</span>
+                </div>
               )}
-              <p className="mt-2 font-semibold text-green-600">
-                Rp {item.price.toLocaleString()}
+            </div>
+
+            {/* Item details */}
+            <h2 className="mb-2 text-2xl font-bold text-gray-900">
+              {selectedMenuItem.name}
+            </h2>
+            <p className="mb-4 text-xl font-bold text-blue-600">
+              ${selectedMenuItem.price}
+            </p>
+
+            <div className="mb-6">
+              <h3 className="mb-2 text-lg font-medium text-gray-800">
+                Description
+              </h3>
+              <p className="text-gray-600">
+                {selectedMenuItem.description ||
+                  "No description available for this menu item."}
               </p>
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 flex-shrink-0 text-green-500 hover:bg-green-50 hover:text-green-600"
-              onClick={onAddToCart}
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+            {/* Quantity selector - only show if item is in cart */}
+            {itemsInCart[selectedMenuItem.id] ? (
+              <div className="mb-6">
+                <h3 className="mb-2 text-lg font-medium text-gray-800">
+                  Quantity
+                </h3>
+                <div className="flex items-center">
+                  <button
+                    onClick={() => changeQuantity(selectedMenuItem.id, -1)}
+                    className="flex h-10 w-10 items-center justify-center rounded-l-md border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <div className="flex h-10 w-14 items-center justify-center border border-gray-300 bg-white">
+                    <span className="text-gray-800">
+                      {itemQuantities[selectedMenuItem.id] || 1}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => changeQuantity(selectedMenuItem.id, 1)}
+                    className="flex h-10 w-10 items-center justify-center rounded-r-md border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Special instructions */}
+            <div className="mb-6">
+              <h3 className="mb-2 text-lg font-medium text-gray-800">
+                Special Instructions
+              </h3>
+              <textarea
+                value={specialInstructions}
+                onChange={(e) => setSpecialInstructions(e.target.value)}
+                placeholder="Any special requests or allergies?"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-gray-700 focus:border-blue-500 focus:outline-none"
+                rows={3}
+              />
+            </div>
+
+            {/* Add to cart button */}
+            {itemsInCart[selectedMenuItem.id] ? (
+              <button
+                onClick={() =>
+                  updateCartItemQuantity(
+                    selectedMenuItem.id,
+                    itemQuantities[selectedMenuItem.id] || 1,
+                  )
+                }
+                disabled={!selectedMenuItem.isAvailable}
+                className={`mb-6 flex w-full items-center justify-center rounded-md py-3 font-medium text-white ${
+                  selectedMenuItem.isAvailable
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "cursor-not-allowed bg-gray-400"
+                }`}
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                {selectedMenuItem.isAvailable
+                  ? `Update Cart - ${(selectedMenuItem.price * (itemQuantities[selectedMenuItem.id] || 1)).toFixed(2)}`
+                  : "Item Not Available"}
+              </button>
+            ) : (
+              <button
+                onClick={() =>
+                  foodcourt &&
+                  addToCart(selectedMenuItem, 1, specialInstructions)
+                }
+                disabled={!selectedMenuItem.isAvailable}
+                className={`mb-6 flex w-full items-center justify-center rounded-md py-3 font-medium text-white ${
+                  selectedMenuItem.isAvailable
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "cursor-not-allowed bg-gray-400"
+                }`}
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                {selectedMenuItem.isAvailable
+                  ? `Add to Cart - ${selectedMenuItem.price.toFixed(2)}`
+                  : "Item Not Available"}
+              </button>
+            )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }

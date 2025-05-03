@@ -12,8 +12,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { foodcourtId } = params;
     const { searchParams } = new URL(request.url);
-    // Using category type instead of categoryId since there's no categoryId in MenuItem
-    const category = searchParams.get("category");
+
+    // Optional category filter
+    const categoryFilter = searchParams.get("category");
 
     if (!foodcourtId) {
       return NextResponse.json(
@@ -28,7 +29,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: foodcourtId,
         isActive: true,
       },
-      select: { id: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+      },
     });
 
     if (!foodcourt) {
@@ -38,24 +43,58 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Get menu items for this foodcourt
-    // Note: since there's no direct categoryId in MenuItem, we can't filter by it
-    // If you want to filter by category, you'll need to add this field to the schema
+    // Check if foodcourt is open
+    if (foodcourt.status === "TUTUP") {
+      return NextResponse.json(
+        {
+          error: "Foodcourt is currently closed",
+          foodcourt: {
+            id: foodcourt.id,
+            name: foodcourt.name,
+            status: foodcourt.status,
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    // Build the query based on optional filters
+    const whereCondition = {
+      foodcourtId: foodcourtId,
+      isAvailable: true,
+      ...(categoryFilter ? { categoryId: categoryFilter } : {}),
+    };
+
     const menuItems = await db.menuItem.findMany({
-      where: {
-        foodcourtId: foodcourtId,
-        isAvailable: true,
-      },
+      where: whereCondition,
       select: {
         id: true,
         name: true,
         description: true,
         price: true,
-        imageUrl: true,
+        image: true,
+        imagePublicId: true,
+        isAvailable: true,
+        categoryId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        name: "asc",
       },
     });
 
-    return NextResponse.json(menuItems, { status: 200 });
+    return NextResponse.json(
+      {
+        foodcourt: {
+          id: foodcourt.id,
+          name: foodcourt.name,
+          status: foodcourt.status,
+        },
+        menuItems: menuItems,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("[FOODCOURT_MENU_GET]", error);
     return NextResponse.json(

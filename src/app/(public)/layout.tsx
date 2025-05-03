@@ -1,48 +1,88 @@
-// src/app/(public)/layout.tsx
-import { Suspense } from "react";
+"use client";
+
+import { Suspense, useEffect, useState, useCallback } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { ShoppingCart } from "lucide-react";
 
 export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen bg-gray-50">
+  const params = useParams();
+  const tableId = params?.id || params?.tableId;
 
+  const [cartCount, setCartCount] = useState(0);
+
+  // Function to get cart count from localStorage - memoize with useCallback
+  const getCartCount = useCallback(() => {
+    if (typeof window !== "undefined") {
+      const cart = localStorage.getItem("cart");
+      if (cart) {
+        try {
+          const cartData = JSON.parse(cart);
+          const itemCount = cartData.items
+            ? cartData.items.reduce(
+                (sum: number, item: any) => sum + item.quantity,
+                0,
+              )
+            : 0;
+          setCartCount(itemCount);
+        } catch (err) {
+          console.error("Error parsing cart data:", err);
+        }
+      } else {
+        setCartCount(0);
+      }
+    }
+  }, []); // No dependencies needed since it doesn't use any props or state
+
+  // Update cart count on mount and when storage changes
+  useEffect(() => {
+    // Initial cart count
+    getCartCount();
+
+    // Add event listener for storage changes
+    window.addEventListener("storage", getCartCount);
+
+    return () => {
+      window.removeEventListener("storage", getCartCount);
+    };
+  }, [getCartCount]); // Add getCartCount as a dependency
+
+  // Only show cart elements if we have a tableId
+  const showCart = !!tableId;
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-24">
       <main>
         <Suspense
           fallback={
             <div className="container mx-auto px-4 py-8 text-center">
-              Loading...
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-blue-500"></div>
+              <p className="mt-2 text-gray-600">Loading...</p>
             </div>
           }
         >
           {children}
         </Suspense>
       </main>
-{/* 
-      <footer className="mt-12 border-t bg-white py-6">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-between md:flex-row">
-            <div className="mb-4 md:mb-0">
-              <p className="text-gray-500">
-                &copy; 2025 FoodCourt Hub. All rights reserved.
-              </p>
-            </div>
-            <div className="flex space-x-6">
-              <a href="#" className="text-gray-500 hover:text-gray-700">
-                Privacy Policy
-              </a>
-              <a href="#" className="text-gray-500 hover:text-gray-700">
-                Terms of Service
-              </a>
-              <a href="#" className="text-gray-500 hover:text-gray-700">
-                Contact Us
-              </a>
-            </div>
+
+      {/* Footer with cart navigation button */}
+      {showCart && cartCount > 0 && (
+        <div className="fixed bottom-0 left-0 z-30 w-full bg-white p-4 shadow-md">
+          <div className="mx-auto max-w-7xl">
+            <Link
+              href={`/table/${tableId}/cart`}
+              className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-center font-medium text-white hover:bg-blue-700"
+            >
+              <ShoppingCart className="mr-2 h-5 w-5" />
+              View Cart ({cartCount} items)
+            </Link>
           </div>
         </div>
-      </footer> */}
+      )}
     </div>
   );
 }

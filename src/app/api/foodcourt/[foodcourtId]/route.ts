@@ -62,7 +62,6 @@ export async function GET(
     const foodcourt = await db.foodcourt.findUnique({
       where: { id: foodcourtId },
       include: {
-        categories: true,
         menuItems: true,
         owner: {
           select: {
