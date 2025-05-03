@@ -1,272 +1,343 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Eye, Edit, Trash2, QrCode, Loader2, PlusCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import AddTableForm from "~/components/dashboard/admin/tables/add-table-form";
 
-// Mendefinisikan interface untuk objek tabel
+// Define interface for table data from API
 interface Table {
   id: string;
-  number: string;
+  tableNumber: string;
   capacity: number;
-  status: string;
+  qrCode: string;
+  isAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
+  activeSession: {
+    id: string;
+    sessionStart: string;
+  } | null;
 }
 
-function App() {
-  // Mendefinisikan tipe untuk state expandedRow
+interface TablesResponse {
+  tables: Table[];
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
+}
+
+export default function TablesPage() {
+  const [tables, setTables] = useState<Table[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const tables: Table[] = [
-    { id: "1", number: "A01", capacity: 4, status: "active" },
-    { id: "2", number: "A02", capacity: 2, status: "active" },
-    { id: "3", number: "B01", capacity: 6, status: "inactive" },
-  ];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const router = useRouter();
 
-  // State untuk menampilkan detail meja pada tampilan mobile
-  // Tipe sudah didefinisikan di atas
+  // Fetch tables from API
+  const fetchTables = async () => {
+    setLoading(true);
+    try {
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (searchQuery) params.append("tableNumber", searchQuery);
+      if (availabilityFilter) params.append("isAvailable", availabilityFilter);
 
-  // Toggle expanded row untuk tampilan mobile
-  const toggleRow = (id: string) => {
-    if (expandedRow === id) {
-      setExpandedRow(null);
-    } else {
-      setExpandedRow(id);
+      const response = await fetch(`/api/admin/tables?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch tables");
+      }
+
+      const data: TablesResponse = await response.json();
+      setTables(data.tables);
+    } catch (error) {
+      console.error("Error fetching tables:", error);
+      toast.error("Failed to load tables");
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Load tables on component mount and when filters change
+  useEffect(() => {
+    fetchTables();
+  }, [searchQuery, availabilityFilter]);
+
+  // Toggle expanded row for mobile view
+  const toggleRow = (id: string) => {
+    setExpandedRow(expandedRow === id ? null : id);
+  };
+
+  // View QR code for a table
+  const viewQrCode = (tableId: string) => {
+    router.push(`/admin/tables/${tableId}/qrcode`);
+  };
+
+  // Handle dialog close and refresh data
+  const handleDialogClose = () => {
+    setShowAddDialog(false);
+    fetchTables(); // Refresh the table list
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col items-start justify-between sm:flex-row sm:items-center">
-          <h1 className="mb-3 text-2xl font-bold tracking-tight sm:mb-0 md:text-3xl">
-            Daftar Meja
-          </h1>
-          <button className="w-full rounded-md bg-indigo-600 px-3 py-1 text-sm text-white transition-colors hover:bg-indigo-700 sm:w-auto">
-            Tambah Meja
-          </button>
-        </div>
-
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row">
-          <input
-            type="text"
-            placeholder="Cari meja..."
-            className="w-full flex-1 rounded-md border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-          />
-          <select className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none sm:w-auto">
-            <option value="">Filter</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
-
-        {/* Desktop View - Tabel tradisional */}
-        <div className="hidden overflow-hidden rounded-lg bg-white shadow md:block">
-          <table className="min-w-full">
-            <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-6 py-3 text-sm font-medium text-black">
-                  Nomor Meja
-                </th>
-                <th className="px-6 py-3 text-sm font-medium text-black">
-                  Kapasitas
-                </th>
-                <th className="px-6 py-3 text-sm font-medium text-black">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-sm font-medium text-black">
-                  QR Code
-                </th>
-                <th className="px-6 py-3 text-sm font-medium text-black">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {tables.map((table) => (
-                <tr key={table.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {table.number}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {table.capacity}
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-sm ${
-                        table.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {table.status === "active" ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="h-8 w-8 rounded bg-gray-200"></div>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex space-x-2">
-                      <button className="rounded bg-blue-100 p-1.5 text-blue-600 hover:bg-blue-200">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      </button>
-                      <button className="rounded bg-orange-100 p-1.5 text-orange-600 hover:bg-orange-200">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        </svg>
-                      </button>
-                      <button className="rounded bg-red-100 p-1.5 text-red-600 hover:bg-red-200">
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="border-t px-6 py-4">
-            <div className="text-sm text-gray-500">
-              Showing 1-3 of 3 entries
-            </div>
+    <div className="container mx-auto py-6">
+      <div className="mb-8">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Tables</h1>
+            <p className="text-muted-foreground">
+              Manage all tables in the system
+            </p>
           </div>
-        </div>
-
-        {/* Mobile View - Card List */}
-        <div className="space-y-4 md:hidden">
-          {tables.map((table) => (
-            <div
-              key={table.id}
-              className="overflow-hidden rounded-lg bg-white shadow"
-            >
-              <div
-                className="flex cursor-pointer items-center justify-between px-4 py-3"
-                onClick={() => toggleRow(table.id)}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="font-medium">{table.number}</div>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
-                      table.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {table.status === "active" ? "Active" : "Inactive"}
-                  </span>
-                </div>
-                <svg
-                  className={`h-5 w-5 transition-transform ${expandedRow === table.id ? "rotate-180 transform" : ""}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-
-              {expandedRow === table.id && (
-                <div className="border-t border-gray-100 px-4 py-3">
-                  <div className="mb-3 grid grid-cols-2 gap-2">
-                    <div className="text-xs text-gray-500">Kapasitas</div>
-                    <div className="text-sm">{table.capacity}</div>
-
-                    <div className="text-xs text-gray-500">QR Code</div>
-                    <div className="h-8 w-8 rounded bg-gray-200"></div>
-                  </div>
-
-                  <div className="flex justify-end space-x-2 pt-2">
-                    <button className="rounded bg-blue-100 p-1.5 text-blue-600 hover:bg-blue-200">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
-                    <button className="rounded bg-orange-100 p-1.5 text-orange-600 hover:bg-orange-200">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                      </svg>
-                    </button>
-                    <button className="rounded bg-red-100 p-1.5 text-red-600 hover:bg-red-200">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 6h18" />
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-          <div className="py-3 text-sm text-gray-500">
-            Showing 1-3 of 3 entries
-          </div>
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Table
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New Table</DialogTitle>
+                <DialogDescription>
+                  Create a new table with a unique table number and QR code
+                </DialogDescription>
+              </DialogHeader>
+              <AddTableForm />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
+
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <Input
+            placeholder="Search by table number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="sm:w-[250px]"
+          />
+          <select
+            className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={availabilityFilter}
+            onChange={(e) => setAvailabilityFilter(e.target.value)}
+          >
+            <option value="">All Tables</option>
+            <option value="true">Available</option>
+            <option value="false">Unavailable</option>
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex h-40 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          {/* Desktop View */}
+          <div className="hidden overflow-hidden rounded-lg border bg-white shadow-sm md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Table Number</TableHead>
+                  <TableHead>Capacity</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>QR Code</TableHead>
+                  <TableHead className="w-[100px] text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tables.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No tables found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  tables.map((table) => (
+                    <TableRow key={table.id}>
+                      <TableCell className="font-medium">
+                        {table.tableNumber}
+                      </TableCell>
+                      <TableCell>{table.capacity}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${table.isAvailable
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                            }`}
+                        >
+                          {table.isAvailable ? "Available" : "Unavailable"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => viewQrCode(table.id)}
+                        >
+                          <QrCode className="mr-2 h-3 w-3" />
+                          View QR
+                        </Button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => viewQrCode(table.id)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              router.push(`/admin/tables/${table.id}/edit`)
+                            }
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Mobile View */}
+          <div className="space-y-4 md:hidden">
+            {tables.length === 0 ? (
+              <div className="rounded-lg border bg-white p-6 text-center">
+                No tables found.
+              </div>
+            ) : (
+              tables.map((table) => (
+                <div
+                  key={table.id}
+                  className="overflow-hidden rounded-lg border bg-white shadow-sm"
+                >
+                  <div
+                    className="flex cursor-pointer items-center justify-between p-4"
+                    onClick={() => toggleRow(table.id)}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="font-medium">{table.tableNumber}</div>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${table.isAvailable
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                          }`}
+                      >
+                        {table.isAvailable ? "Available" : "Unavailable"}
+                      </span>
+                    </div>
+                    <svg
+                      className={`h-5 w-5 transition-transform ${expandedRow === table.id ? "rotate-180 transform" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </div>
+
+                  {expandedRow === table.id && (
+                    <div className="border-t border-gray-100 p-4">
+                      <div className="mb-4 grid grid-cols-2 gap-2">
+                        <div className="text-xs text-gray-500">Capacity</div>
+                        <div className="text-sm">{table.capacity}</div>
+
+                        <div className="text-xs text-gray-500">Status</div>
+                        <div className="text-sm">
+                          {table.isAvailable ? "Available" : "Unavailable"}
+                        </div>
+
+                        <div className="text-xs text-gray-500">Created</div>
+                        <div className="text-sm">
+                          {new Date(table.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => viewQrCode(table.id)}
+                          className="w-full"
+                        >
+                          <QrCode className="mr-2 h-3 w-3" />
+                          View QR Code
+                        </Button>
+
+                        <div className="flex justify-between gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() =>
+                              router.push(`/admin/tables/${table.id}/edit`)
+                            }
+                          >
+                            <Edit className="mr-2 h-3 w-3" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-3 w-3" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
-
-export default App;
