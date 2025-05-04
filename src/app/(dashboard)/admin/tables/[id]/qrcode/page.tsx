@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import {useParams, useRouter} from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
@@ -23,11 +23,9 @@ interface QrCodeData {
   downloadUrl: string;
 }
 
-export default function TableQrCodePage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function TableQrCodePage(){
+  const params = useParams();
+  const id = params.id as string;
   const [loading, setLoading] = useState(true);
   const [qrCodeData, setQrCodeData] = useState<QrCodeData | null>(null);
   const router = useRouter();
