@@ -1,0 +1,945 @@
+{
+  "info": {
+    "name": "RGFOOD API Collection",
+    "description": "Complete API documentation for the RGFOOD application",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Public APIs",
+      "description": "Endpoints accessible without authentication",
+      "item": [
+        {
+          "name": "Foodcourts",
+          "item": [
+            {
+              "name": "Get All Foodcourts",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/public/foodcourt",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "public", "foodcourt"]
+                },
+                "description": "Retrieves a list of all active foodcourts.\n\nReturns foodcourt details including id, name, description, address, image, category, and status."
+              },
+              "response": [
+                {
+                  "name": "Success Response",
+                  "originalRequest": {
+                    "method": "GET",
+                    "url": {
+                      "raw": "{{baseUrl}}/api/public/foodcourt",
+                      "host": ["{{baseUrl}}"],
+                      "path": ["api", "public", "foodcourt"]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "header": [
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json"
+                    }
+                  ],
+                  "body": "[\n  {\n    \"id\": \"fc123\",\n    \"name\": \"Food Paradise\",\n    \"description\": \"A variety of delicious foods\",\n    \"address\": \"Jl. Makan Enak No. 123\",\n    \"image\": \"https://example.com/image.jpg\",\n    \"imagePublicId\": \"foodcourts/fc123\",\n    \"category\": \"MIXED\",\n    \"status\": \"BUKA\"\n  }\n]"
+                }
+              ]
+            },
+            {
+              "name": "Get Foodcourt Menu",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/public/foodcourt/:foodcourtId/menu?categoryFilter=:categoryId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "public", "foodcourt", ":foodcourtId", "menu"],
+                  "variable": [
+                    {
+                      "key": "foodcourtId",
+                      "value": "",
+                      "description": "ID of the foodcourt"
+                    }
+                  ],
+                  "query": [
+                    {
+                      "key": "categoryFilter",
+                      "value": ":categoryId",
+                      "description": "Optional filter by category ID",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieves menu items for a specific foodcourt.\n\nReturns a list of available menu items with details including id, name, description, price, image, and category."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Tables",
+          "item": [
+            {
+              "name": "Get All Tables",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/public/tables?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "public", "tables"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number for pagination"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Number of items per page"
+                    }
+                  ]
+                },
+                "description": "Retrieves a list of all tables.\n\nReturns table details including id, tableNumber, capacity, qrCode, isAvailable, and active session information if any."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Table Details",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/public/tables/:tableId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "public", "tables", ":tableId"],
+                  "variable": [
+                    {
+                      "key": "tableId",
+                      "value": "",
+                      "description": "ID of the table"
+                    }
+                  ]
+                },
+                "description": "Retrieves details for a specific table.\n\nReturns table information including active session and active orders if any."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Table Orders",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/public/tables/:tableId/orders?status=:status&page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "public", "tables", ":tableId", "orders"],
+                  "variable": [
+                    {
+                      "key": "tableId",
+                      "value": "",
+                      "description": "ID of the table"
+                    }
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": ":status",
+                      "description": "Filter by order status",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number for pagination"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Number of items per page"
+                    }
+                  ]
+                },
+                "description": "Retrieves orders for a specific table.\n\nReturns a list of orders with their details including items, status, and timestamps."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Orders",
+          "item": [
+            {
+              "name": "Place Order",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/public/orders",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "public", "orders"]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tableId\": \"table123\",\n  \"customerName\": \"John Doe\",\n  \"items\": [\n    {\n      \"menuItemId\": \"menu123\",\n      \"quantity\": 2,\n      \"specialInstructions\": \"Extra spicy\"\n    }\n  ],\n  \"specialInstructions\": \"Please deliver quickly\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Places a new order for a table.\n\nRequires tableId and an array of items with menuItemId and quantity. Customer name is optional.\n\nReturns the created order with its ID, status, and total amount."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin APIs",
+      "description": "Endpoints accessible only by admin users",
+      "item": [
+        {
+          "name": "Tables Management",
+          "item": [
+            {
+              "name": "Get All Tables (Admin)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/tables?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "tables"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number for pagination"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Number of items per page"
+                    }
+                  ]
+                },
+                "description": "Retrieves a list of all tables for admin management.\n\nRequires admin authentication.\n\nReturns table details including active sessions and orders."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Table",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/tables",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "tables"]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tableNumber\": \"A1\",\n  \"capacity\": 4,\n  \"isAvailable\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Creates a new table.\n\nRequires admin authentication.\n\nRequires tableNumber and capacity. isAvailable is optional (defaults to true).\n\nReturns the created table with its ID and QR code URL."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Table Details (Admin)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/tables/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "tables", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "ID of the table"
+                    }
+                  ]
+                },
+                "description": "Retrieves details for a specific table for admin management.\n\nRequires admin authentication.\n\nReturns table information including active session and active orders if any."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Table",
+              "request": {
+                "method": "PUT",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/tables/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "tables", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "ID of the table"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tableNumber\": \"A2\",\n  \"capacity\": 6,\n  \"isAvailable\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Updates an existing table.\n\nRequires admin authentication.\n\nAll fields are optional. Only provided fields will be updated.\n\nReturns the updated table."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Table",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/tables/:id",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "tables", ":id"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "ID of the table"
+                    }
+                  ]
+                },
+                "description": "Deletes a table.\n\nRequires admin authentication.\n\nCannot delete tables with active orders.\n\nReturns a success message if deletion is successful."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Table QR Code",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/tables/:id/qrcode",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "tables", ":id", "qrcode"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "ID of the table"
+                    }
+                  ]
+                },
+                "description": "Retrieves QR code for a specific table.\n\nRequires admin authentication.\n\nReturns QR code data URL and download URL."
+              },
+              "response": []
+            },
+            {
+              "name": "Download Table QR Code",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/tables/:id/qrcode/download",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "tables", ":id", "qrcode", "download"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "ID of the table"
+                    }
+                  ]
+                },
+                "description": "Downloads QR code for a specific table as a PNG file.\n\nRequires admin authentication.\n\nReturns a PNG file with appropriate headers."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Foodcourts Management",
+          "item": [
+            {
+              "name": "Get All Foodcourts (Admin)",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/foodcourts?page=1&limit=10&name=:name&status=:status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "foodcourts"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number for pagination"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Number of items per page"
+                    },
+                    {
+                      "key": "name",
+                      "value": ":name",
+                      "description": "Filter by foodcourt name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": ":status",
+                      "description": "Filter by foodcourt status",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieves a list of all foodcourts for admin management.\n\nRequires admin authentication.\n\nReturns foodcourt details including owner and creator information."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Available Owners",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/foodcourts/available-owners",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "foodcourts", "available-owners"]
+                },
+                "description": "Retrieves a list of owners who don't have a foodcourt assigned yet.\n\nRequires admin authentication.\n\nReturns owner details including id, name, email, and createdAt."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Owners Management",
+          "item": [
+            {
+              "name": "Get All Owners",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/owners",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "owners"]
+                },
+                "description": "Retrieves a list of all owners with their foodcourts.\n\nRequires admin authentication.\n\nReturns owner details including owned foodcourts."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Permission Templates",
+          "item": [
+            {
+              "name": "Get All Permission Templates",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/permission-templates?name=:name&page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "permission-templates"],
+                  "query": [
+                    {
+                      "key": "name",
+                      "value": ":name",
+                      "description": "Filter by template name",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number for pagination"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Number of items per page"
+                    }
+                  ]
+                },
+                "description": "Retrieves a list of all permission templates.\n\nRequires admin authentication.\n\nReturns template details including creator information."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Permission Template",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/permission-templates",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "permission-templates"]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Full Access\",\n  \"description\": \"Full access to all features\",\n  \"canEditMenu\": true,\n  \"canViewOrders\": true,\n  \"canUpdateOrders\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Creates a new permission template.\n\nRequires admin authentication.\n\nRequires name. Other fields are optional.\n\nReturns the created template."
+              },
+              "response": []
+            },
+            {
+              "name": "Apply Permission Template",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/permission-templates/:id/apply",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "permission-templates", ":id", "apply"],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "ID of the permission template"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"ownerIds\": [\"owner123\", \"owner456\"]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Applies a permission template to multiple owners.\n\nRequires admin authentication.\n\nRequires an array of owner IDs.\n\nReturns details about the application of the template."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Permissions History",
+          "item": [
+            {
+              "name": "Get Permissions History",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/admin/permissions/history?page=1&limit=10&ownerId=:ownerId&foodcourtId=:foodcourtId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "admin", "permissions", "history"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number for pagination"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Number of items per page"
+                    },
+                    {
+                      "key": "ownerId",
+                      "value": ":ownerId",
+                      "description": "Filter by owner ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "foodcourtId",
+                      "value": ":foodcourtId",
+                      "description": "Filter by foodcourt ID",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieves a history of permission changes.\n\nRequires admin authentication.\n\nReturns permission change history including who made the changes."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Foodcourt Owner APIs",
+      "description": "Endpoints accessible by foodcourt owners",
+      "item": [
+        {
+          "name": "Menu Management",
+          "item": [
+            {
+              "name": "Get Menu Items",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/foodcourt/:foodcourtId/menu?categoryId=:categoryId&available=:available",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "foodcourt", ":foodcourtId", "menu"],
+                  "variable": [
+                    {
+                      "key": "foodcourtId",
+                      "value": "",
+                      "description": "ID of the foodcourt"
+                    }
+                  ],
+                  "query": [
+                    {
+                      "key": "categoryId",
+                      "value": ":categoryId",
+                      "description": "Filter by category ID",
+                      "disabled": true
+                    },
+                    {
+                      "key": "available",
+                      "value": ":available",
+                      "description": "Filter by availability (true/false)",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Retrieves menu items for a specific foodcourt.\n\nRequires owner authentication and permission.\n\nReturns a list of menu items with their details."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Menu Item",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/foodcourt/:foodcourtId/menu",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "foodcourt", ":foodcourtId", "menu"],
+                  "variable": [
+                    {
+                      "key": "foodcourtId",
+                      "value": "",
+                      "description": "ID of the foodcourt"
+                    }
+                  ]
+                },
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Nasi Goreng\",\n  \"description\": \"Delicious fried rice\",\n  \"price\": 25000,\n  \"isAvailable\": true,\n  \"categoryId\": \"cat123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Creates a new menu item for a foodcourt.\n\nRequires owner authentication and permission.\n\nRequires name and price. Other fields are optional.\n\nReturns the created menu item."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Menu Item Details",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/foodcourt/:foodcourtId/menu/:menuId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "foodcourt", ":foodcourtId", "menu", ":menuId"],
+                  "variable": [
+                    {
+                      "key": "foodcourtId",
+                      "value": "",
+                      "description": "ID of the foodcourt"
+                    },
+                    {
+                      "key": "menuId",
+                      "value": "",
+                      "description": "ID of the menu item"
+                    }
+                  ]
+                },
+                "description": "Retrieves details for a specific menu item.\n\nRequires owner authentication and permission.\n\nReturns menu item details."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Orders Management",
+          "item": [
+            {
+              "name": "Get Foodcourt Orders",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/foodcourt/:foodcourtId/orders?status=:status&activeOnly=:activeOnly&historyOnly=:historyOnly&page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "foodcourt", ":foodcourtId", "orders"],
+                  "variable": [
+                    {
+                      "key": "foodcourtId",
+                      "value": "",
+                      "description": "ID of the foodcourt"
+                    }
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": ":status",
+                      "description": "Filter by order status",
+                      "disabled": true
+                    },
+                    {
+                      "key": "activeOnly",
+                      "value": ":activeOnly",
+                      "description": "Show only active orders (true/false)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "historyOnly",
+                      "value": ":historyOnly",
+                      "description": "Show only completed/cancelled orders (true/false)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number for pagination"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Number of items per page"
+                    }
+                  ]
+                },
+                "description": "Retrieves orders for a specific foodcourt.\n\nRequires owner authentication and permission.\n\nReturns a list of orders with their details."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Order Details",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/foodcourt/:foodcourtId/orders/:orderId",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "foodcourt", ":foodcourtId", "orders", ":orderId"],
+                  "variable": [
+                    {
+                      "key": "foodcourtId",
+                      "value": "",
+                      "description": "ID of the foodcourt"
+                    },
+                    {
+                      "key": "orderId",
+                      "value": "",
+                      "description": "ID of the order"
+                    }
+                  ]
+                },
+                "description": "Retrieves details for a specific order.\n\nRequires owner authentication and permission.\n\nReturns order details including items, status, and customer information."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "description": "Authentication endpoints",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"OWNER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Registers a new user.\n\nRequires name, email, and password. Role is optional (defaults to OWNER).\n\nReturns the created user without the password."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Authenticates a user.\n\nRequires email and password.\n\nReturns a session token and user information."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email?token={{verificationToken}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify-email"],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{verificationToken}}",
+                  "description": "Verification token sent in the email"
+                }
+              ]
+            },
+            "description": "Verifies a user's email address using the token sent in the verification email.\n\nReturns a success message if verification is successful."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Verification Email",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-verification",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-verification"]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Resends the verification email to a user.\n\nRequires email.\n\nReturns a success message if email is sent successfully."
+          },
+          "response": []
+        },
+        {
+          "name": "Debug Email",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/debug-email?email=test@example.com",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "debug-email"],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "test@example.com",
+                  "description": "Email address to send test email to"
+                }
+              ]
+            },
+            "description": "Sends a test email to verify email configuration.\n\nReturns details about the email sending process."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "description": "Search endpoints",
+      "item": [
+        {
+          "name": "Search Foodcourts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/foodcourt/search?q=:query",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "foodcourt", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": ":query",
+                  "description": "Search query"
+                }
+              ]
+            },
+            "description": "Searches for foodcourts by name.\n\nReturns a list of matching foodcourts with their details."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Base URL for the API"
+    }
+  ]
+}
