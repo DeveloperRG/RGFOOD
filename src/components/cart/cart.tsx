@@ -68,6 +68,7 @@ export default function CartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [customerName, setCustomerName] = useState<string>("");
   const [selectedFoodcourt, setSelectedFoodcourt] = useState<string | null>(
     null,
   );
@@ -276,12 +277,20 @@ export default function CartPage() {
 
     if (foodcourtItems.length === 0) return;
 
+    // Validate that customer name is provided
+    const trimmedCustomerName = customerName.trim();
+    if (!trimmedCustomerName) {
+      setError("Nama pemesan harus diisi sebelum melakukan pemesanan");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     try {
       const orderData = {
         tableId: tableId,
+        customerName: trimmedCustomerName, // Customer name is now required
         items: foodcourtItems.map((item) => ({
           menuItemId: item.menuItemId,
           quantity: item.quantity,
@@ -345,10 +354,12 @@ export default function CartPage() {
                 <ArrowLeft className="h-5 w-5 text-gray-600" />
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Your Cart</h1>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Keranjang Anda
+                </h1>
                 {tableInfo && (
                   <p className="text-sm text-gray-500">
-                    Table #{tableInfo.tableNumber}
+                    Meja #{tableInfo.tableNumber}
                   </p>
                 )}
               </div>
@@ -362,16 +373,16 @@ export default function CartPage() {
               <ShoppingBag className="h-8 w-8 text-gray-400" />
             </div>
             <h3 className="mb-1 text-lg font-medium text-gray-900">
-              Your cart is empty
+              Keranjang Anda kosong
             </h3>
             <p className="mb-6 text-gray-500">
-              You haven't added any items to your cart yet
+              Anda belum menambahkan item ke keranjang
             </p>
             <Link
               href={`/table/${tableId}`}
               className="rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
             >
-              Browse Foodcourts
+              Jelajahi Foodcourt
             </Link>
           </div>
         </div>
@@ -394,11 +405,11 @@ export default function CartPage() {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Order Confirmation
+                  Konfirmasi Pesanan
                 </h1>
                 {tableInfo && (
                   <p className="text-sm text-gray-500">
-                    Table #{tableInfo.tableNumber}
+                    Meja #{tableInfo.tableNumber}
                   </p>
                 )}
               </div>
@@ -425,19 +436,24 @@ export default function CartPage() {
               </svg>
             </div>
             <h3 className="mb-1 text-lg font-medium text-gray-900">
-              Order Placed Successfully
+              Pesanan Berhasil Dikirim
             </h3>
+            <p className="mb-2 text-gray-500">
+              {customerName
+                ? `Terima kasih, ${customerName}!`
+                : "Terima kasih!"}
+            </p>
             <p className="mb-6 text-gray-500">
-              Your order has been placed and is being prepared.
+              Pesanan Anda telah dikirim dan sedang dipersiapkan.
             </p>
             <p className="mb-6 text-sm text-gray-500">
-              Redirecting to orders page...
+              Mengalihkan ke halaman pesanan...
             </p>
             <Link
               href={`/table/${tableId}/orders`}
               className="rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
             >
-              View Your Orders
+              Lihat Pesanan Anda
             </Link>
           </div>
         </div>
@@ -476,10 +492,12 @@ export default function CartPage() {
               <ArrowLeft className="h-5 w-5 text-gray-600" />
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Your Cart</h1>
+              <h1 className="text-xl font-bold text-gray-900">
+                Keranjang Anda
+              </h1>
               {tableInfo && (
                 <p className="text-sm text-gray-500">
-                  Table #{tableInfo.tableNumber}
+                  Meja #{tableInfo.tableNumber}
                 </p>
               )}
             </div>
@@ -492,7 +510,7 @@ export default function CartPage() {
         {Object.keys(groupedItems).length > 1 && (
           <div className="mb-6">
             <h2 className="mb-3 text-lg font-bold text-gray-900">
-              Select Foodcourt to Order From:
+              Pilih Foodcourt untuk Memesan:
             </h2>
             <div className="flex flex-wrap gap-2">
               {Object.entries(groupedItems).map(
@@ -509,7 +527,7 @@ export default function CartPage() {
                     <Store className="mr-2 h-4 w-4" />
                     {foodcourtName}
                     <span className="ml-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700">
-                      ${subtotal.toFixed(2)}
+                      Rp {subtotal.toLocaleString("id-ID")}
                     </span>
                   </button>
                 ),
@@ -532,7 +550,7 @@ export default function CartPage() {
                     className="flex items-center text-red-500 hover:text-red-700"
                   >
                     <Trash2 className="mr-1 h-4 w-4" />
-                    <span className="text-sm">Remove All</span>
+                    <span className="text-sm">Hapus Semua</span>
                   </button>
                 )}
               </div>
@@ -569,11 +587,13 @@ export default function CartPage() {
                           <h3 className="text-lg font-medium text-gray-900">
                             {item.name}
                           </h3>
-                          <p className="text-gray-500">${item.price} each</p>
+                          <p className="text-gray-500">
+                            Rp {item.price.toLocaleString("id-ID")} per item
+                          </p>
                           {item.specialInstructions && (
                             <p className="mt-1 text-sm text-gray-500">
                               <span className="font-medium">
-                                Special instructions:
+                                Instruksi khusus:
                               </span>{" "}
                               {item.specialInstructions}
                             </p>
@@ -581,14 +601,17 @@ export default function CartPage() {
                         </div>
                         <div className="flex flex-col items-end">
                           <p className="mb-2 font-bold text-blue-600">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            Rp{" "}
+                            {(item.price * item.quantity).toLocaleString(
+                              "id-ID",
+                            )}
                           </p>
                           <button
                             onClick={() => removeItem(item.id)}
                             className="flex items-center text-red-500 hover:text-red-700"
                           >
                             <Trash2 className="mr-1 h-4 w-4" />
-                            <span className="text-sm">Remove</span>
+                            <span className="text-sm">Hapus</span>
                           </button>
                         </div>
                       </div>
@@ -616,7 +639,7 @@ export default function CartPage() {
                 </div>
               ) : (
                 <p className="py-4 text-center text-gray-500">
-                  Please select a foodcourt to view items
+                  Silakan pilih foodcourt untuk melihat item
                 </p>
               )}
 
@@ -627,7 +650,7 @@ export default function CartPage() {
                 >
                   <span className="flex items-center">
                     <ArrowLeft className="mr-1 h-4 w-4" />
-                    Continue Shopping
+                    Lanjutkan Belanja
                   </span>
                 </Link>
               </div>
@@ -638,22 +661,44 @@ export default function CartPage() {
           <div className="lg:col-span-1">
             <div className="rounded-lg bg-white p-6 shadow-md">
               <h2 className="mb-4 text-xl font-bold text-gray-900">
-                Order Summary
+                Ringkasan Pesanan
               </h2>
 
               {selectedFoodcourtData ? (
                 <>
                   <div className="mb-6">
+                    {/* Customer Name Input */}
+                    <div className="mb-4">
+                      <label
+                        htmlFor="customerName"
+                        className="mb-2 block text-sm font-medium text-gray-700"
+                      >
+                        Nama Pemesan <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="customerName"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="Masukkan nama Anda"
+                        required
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Nama pemesan wajib diisi untuk melanjutkan pemesanan
+                      </p>
+                    </div>
+
                     <div className="mb-2 flex justify-between">
                       <span className="text-gray-600">Subtotal</span>
                       <span className="font-medium">
-                        ${foodcourtSubtotal.toFixed(2)}
+                        Rp {foodcourtSubtotal.toLocaleString("id-ID")}
                       </span>
                     </div>
                     <div className="mb-2 flex justify-between">
-                      <span className="text-gray-600">Tax (10%)</span>
+                      <span className="text-gray-600">Pajak (10%)</span>
                       <span className="font-medium">
-                        ${foodcourtTax.toFixed(2)}
+                        Rp {foodcourtTax.toLocaleString("id-ID")}
                       </span>
                     </div>
                     <div className="mt-4 flex justify-between border-t border-gray-200 pt-4">
@@ -661,7 +706,7 @@ export default function CartPage() {
                         Total
                       </span>
                       <span className="text-lg font-bold text-blue-600">
-                        ${foodcourtTotal.toFixed(2)}
+                        Rp {foodcourtTotal.toLocaleString("id-ID")}
                       </span>
                     </div>
                   </div>
@@ -697,23 +742,23 @@ export default function CartPage() {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           ></path>
                         </svg>
-                        Processing...
+                        Memproses...
                       </span>
                     ) : (
-                      `Place Order from ${selectedFoodcourtData.foodcourtName}`
+                      `Pesan dari ${selectedFoodcourtData.foodcourtName}`
                     )}
                   </button>
                 </>
               ) : (
                 <p className="text-center text-gray-500">
-                  Please select a foodcourt to order from
+                  Silakan pilih foodcourt untuk memesan
                 </p>
               )}
 
               <div className="mt-4 text-xs text-gray-500">
                 <p>
-                  By placing your order, you agree to the terms and conditions
-                  of the foodcourt.
+                  Dengan melakukan pemesanan, Anda menyetujui syarat dan
+                  ketentuan dari foodcourt.
                 </p>
               </div>
             </div>
@@ -737,11 +782,11 @@ export default function CartPage() {
                   </div>
                   <div>
                     <h3 className="mb-1 text-sm font-medium text-yellow-800">
-                      Multiple Foodcourts
+                      Beberapa Foodcourt
                     </h3>
                     <p className="text-xs text-yellow-700">
-                      Your cart contains items from multiple foodcourts. You
-                      need to place separate orders for each foodcourt.
+                      Keranjang Anda berisi item dari beberapa foodcourt. Anda
+                      perlu melakukan pemesanan terpisah untuk setiap foodcourt.
                     </p>
                   </div>
                 </div>

@@ -281,12 +281,13 @@ export default function FoodcourtMenuPage() {
 
       // If quantity becomes 0, remove from cart
       if (newQuantity === 0) {
-        removeFromCart(itemId);
+        // Use setTimeout to avoid state updates during render
+        setTimeout(() => removeFromCart(itemId), 0);
         return { ...prev, [itemId]: 1 }; // Reset to 1 for next time
       }
 
-      // Otherwise update the cart with new quantity
-      updateCartItemQuantity(itemId, newQuantity);
+      // Otherwise update the cart with new quantity - use setTimeout to avoid state updates during render
+      setTimeout(() => updateCartItemQuantity(itemId, newQuantity), 0);
       return { ...prev, [itemId]: newQuantity };
     });
   };
@@ -676,6 +677,7 @@ export default function FoodcourtMenuPage() {
                             className="px-2 py-1 text-gray-600 hover:bg-gray-100"
                             onClick={(e) => {
                               e.stopPropagation();
+                              // This is in an event handler, so it's safe
                               changeQuantity(menuItem.id, -1);
                             }}
                           >
@@ -688,6 +690,7 @@ export default function FoodcourtMenuPage() {
                             className="px-2 py-1 text-gray-600 hover:bg-gray-100"
                             onClick={(e) => {
                               e.stopPropagation();
+                              // This is in an event handler, so it's safe
                               changeQuantity(menuItem.id, 1);
                             }}
                           >
@@ -700,6 +703,7 @@ export default function FoodcourtMenuPage() {
                         className="rounded-md bg-blue-600 px-3 py-1 text-white transition-colors hover:bg-blue-700"
                         onClick={(e) => {
                           e.stopPropagation();
+                          // This is in an event handler, so it's safe
                           addToCart(menuItem);
                         }}
                         disabled={!menuItem.isAvailable}
@@ -739,7 +743,7 @@ export default function FoodcourtMenuPage() {
         )}
       </div>
 
-      {/* Footer with cart navigation button */}
+      {/* Footer with cart navigation button
       {cartCount > 0 && (
         <div className="fixed bottom-0 left-0 z-30 w-full bg-white p-4 shadow-md">
           <div className="mx-auto max-w-7xl">
@@ -752,7 +756,7 @@ export default function FoodcourtMenuPage() {
             </Link>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Menu Item Detail Popup */}
       {showPopup && selectedMenuItem && (
@@ -817,7 +821,10 @@ export default function FoodcourtMenuPage() {
                 </h3>
                 <div className="flex items-center">
                   <button
-                    onClick={() => changeQuantity(selectedMenuItem.id, -1)}
+                    onClick={() => {
+                      // This is in an event handler, so it's safe
+                      changeQuantity(selectedMenuItem.id, -1);
+                    }}
                     className="flex h-10 w-10 items-center justify-center rounded-l-md border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100"
                   >
                     <Minus className="h-4 w-4" />
@@ -828,7 +835,10 @@ export default function FoodcourtMenuPage() {
                     </span>
                   </div>
                   <button
-                    onClick={() => changeQuantity(selectedMenuItem.id, 1)}
+                    onClick={() => {
+                      // This is in an event handler, so it's safe
+                      changeQuantity(selectedMenuItem.id, 1);
+                    }}
                     className="flex h-10 w-10 items-center justify-center rounded-r-md border border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100"
                   >
                     <Plus className="h-4 w-4" />
@@ -854,12 +864,13 @@ export default function FoodcourtMenuPage() {
             {/* Add to cart button */}
             {itemsInCart[selectedMenuItem.id] ? (
               <button
-                onClick={() =>
+                onClick={() => {
+                  // Use a regular function call in an event handler - this is safe
                   updateCartItemQuantity(
                     selectedMenuItem.id,
                     itemQuantities[selectedMenuItem.id] || 1,
-                  )
-                }
+                  );
+                }}
                 disabled={!selectedMenuItem.isAvailable}
                 className={`mb-6 flex w-full items-center justify-center rounded-md py-3 font-medium text-white ${
                   selectedMenuItem.isAvailable
@@ -874,10 +885,12 @@ export default function FoodcourtMenuPage() {
               </button>
             ) : (
               <button
-                onClick={() =>
-                  foodcourt &&
-                  addToCart(selectedMenuItem, 1, specialInstructions)
-                }
+                onClick={() => {
+                  // Use a regular function call in an event handler - this is safe
+                  if (foodcourt) {
+                    addToCart(selectedMenuItem, 1, specialInstructions);
+                  }
+                }}
                 disabled={!selectedMenuItem.isAvailable}
                 className={`mb-6 flex w-full items-center justify-center rounded-md py-3 font-medium text-white ${
                   selectedMenuItem.isAvailable

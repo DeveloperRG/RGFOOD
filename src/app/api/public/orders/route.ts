@@ -12,7 +12,7 @@ interface OrderItemRequest {
 
 interface OrderRequest {
   tableId: string;
-  customerName: string;
+  customerName?: string; // Make optional since we can use table number as default
   items: OrderItemRequest[];
   specialInstructions?: string;
 }
@@ -35,12 +35,15 @@ interface OrderItemData {
 export async function POST(request: NextRequest) {
   try {
     const data = (await request.json()) as OrderRequest;
-    const { tableId, customerName, items, specialInstructions } = data;
+    const { tableId, customerName, items } = data;
 
     // Validate input
-    if (!tableId || !customerName || !items || !items.length) {
+    if (!tableId || !items || !items.length) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        {
+          error: "Missing required fields",
+          message: "Bidang yang diperlukan tidak lengkap",
+        },
         { status: 400 },
       );
     }
@@ -53,8 +56,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (!table) {
-      return NextResponse.json({ error: "Table not found" }, { status: 404 });
+      return NextResponse.json(
+        {
+          error: "Table not found",
+          message: "Meja tidak ditemukan",
+        },
+        { status: 404 },
+      );
     }
+
+    // Use table number as customer name if not provided
+    const effectiveCustomerName = customerName || `Meja #${table.tableNumber}`;
 
     // Validate items are available and get their prices and foodcourt IDs
     const menuItemIds = items.map((item) => item.menuItemId);
@@ -70,7 +82,10 @@ export async function POST(request: NextRequest) {
 
     if (menuItems.length !== menuItemIds.length) {
       return NextResponse.json(
-        { error: "Some menu items are not available or do not exist" },
+        {
+          error: "Some menu items are not available or do not exist",
+          message: "Beberapa item menu tidak tersedia atau tidak ada",
+        },
         { status: 400 },
       );
     }
@@ -155,7 +170,7 @@ export async function POST(request: NextRequest) {
       // Create the main order
       const newOrder = await prisma.order.create({
         data: {
-          customerName,
+          customerName: effectiveCustomerName,
           totalAmount,
           status: OrderStatus.PENDING,
           tableId,
@@ -198,7 +213,7 @@ export async function POST(request: NextRequest) {
           data: {
             foodcourtId,
             orderId: newOrder.id,
-            message: `New order #${newOrder.id} received`,
+            message: `Pesanan baru #${newOrder.id} diterima dari ${effectiveCustomerName}`,
           },
         });
       }
@@ -207,7 +222,7 @@ export async function POST(request: NextRequest) {
       await prisma.orderNotification.create({
         data: {
           orderId: newOrder.id,
-          message: `Your order has been received and is being processed.`,
+          message: `Pesanan Anda telah diterima dan sedang diproses.`,
         },
       });
 
@@ -217,11 +232,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        message: "Pesanan berhasil dibuat",
         order: {
           id: order.id,
           status: order.status,
           totalAmount: order.totalAmount,
           createdAt: order.createdAt,
+          formattedAmount: `Rp ${Number(order.totalAmount).toLocaleString("id-ID")}`,
         },
       },
       { status: 201 },
@@ -231,6 +248,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to place order",
+        message: "Gagal membuat pesanan",
         details: (error as Error).message,
       },
       { status: 500 },
