@@ -10,6 +10,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
   DialogTrigger,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
@@ -55,6 +56,9 @@ export default function TablesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [availabilityFilter, setAvailabilityFilter] = useState<string>("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const router = useRouter();
 
   // Fetch tables from API
@@ -100,6 +104,30 @@ export default function TablesPage() {
   const handleDialogClose = () => {
     setShowAddDialog(false);
     fetchTables(); // Refresh the table list
+  };
+
+  // Delete table handler
+  const handleDelete = async () => {
+    if (!selectedTable) return;
+    setDeleteLoadingId(selectedTable.id);
+    try {
+      const res = await fetch(`/api/admin/tables/${selectedTable.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to delete table");
+      } else {
+        toast.success("Table deleted successfully");
+        fetchTables();
+        setDeleteDialogOpen(false);
+        setSelectedTable(null);
+      }
+    } catch (e) {
+      toast.error("Network error");
+    } finally {
+      setDeleteLoadingId(null);
+    }
   };
 
   return (
@@ -209,26 +237,67 @@ export default function TablesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => viewQrCode(table.id)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
                             onClick={() =>
                               router.push(`/admin/tables/${table.id}/edit`)
                             }
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
+                          <Dialog
+                            open={deleteDialogOpen && selectedTable?.id === table.id}
+                            onOpenChange={(open) => {
+                              setDeleteDialogOpen(open);
+                              if (!open) setSelectedTable(null);
+                            }}
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive"
+                                onClick={() => {
+                                  setSelectedTable(table);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>
+                                  Delete Table "{table.tableNumber}"?
+                                </DialogTitle>
+                                <DialogDescription>
+                                  This action cannot be undone. Are you sure you want to delete table <b>{table.tableNumber}</b>?
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setDeleteDialogOpen(false);
+                                    setSelectedTable(null);
+                                  }}
+                                  disabled={deleteLoadingId === table.id}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  onClick={handleDelete}
+                                  disabled={deleteLoadingId === table.id}
+                                >
+                                  {deleteLoadingId === table.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                  )}
+                                  Delete
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -320,14 +389,62 @@ export default function TablesPage() {
                             <Edit className="mr-2 h-3 w-3" />
                             Edit
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-destructive"
+                          <Dialog
+                            open={deleteDialogOpen && selectedTable?.id === table.id}
+                            onOpenChange={(open) => {
+                              setDeleteDialogOpen(open);
+                              if (!open) setSelectedTable(null);
+                            }}
                           >
-                            <Trash2 className="mr-2 h-3 w-3" />
-                            Delete
-                          </Button>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 text-destructive"
+                                onClick={() => {
+                                  setSelectedTable(table);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-3 w-3" />
+                                Delete
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>
+                                  Delete Table "{table.tableNumber}"?
+                                </DialogTitle>
+                                <DialogDescription>
+                                  This action cannot be undone. Are you sure you want to delete table <b>{table.tableNumber}</b>?
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    setDeleteDialogOpen(false);
+                                    setSelectedTable(null);
+                                  }}
+                                  disabled={deleteLoadingId === table.id}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  onClick={handleDelete}
+                                  disabled={deleteLoadingId === table.id}
+                                >
+                                  {deleteLoadingId === table.id ? (
+                                    <Loader2 className="mr-2 h-3 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="mr-2 h-3 w-4" />
+                                  )}
+                                  Delete
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </div>
                     </div>
