@@ -1,4 +1,4 @@
-// src/app/api/foodcourt/[foodcourtId]/orders/[orderId]/status/route.ts
+// src/app/api/foodcourt/[foodcourtId]/orderitems/[orderItemId]/status/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "~/server/auth";
@@ -9,7 +9,7 @@ interface UpdateStatusRequest {
 }
 
 /**
- * PATCH /api/foodcourt/[foodcourtId]/orders/[orderItemId]/status
+ * PATCH /api/foodcourt/[foodcourtId]/orderitems/[orderItemId]/status
  * Endpoint for foodcourt owners to update the status of an order item
  */
 export async function PATCH(
