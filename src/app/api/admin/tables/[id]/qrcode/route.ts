@@ -4,33 +4,28 @@ import { db } from "~/server/db";
 import { UserRole } from "@prisma/client";
 import { generateQrCodeDataUrl, generateTableQrCodeUrl } from "~/lib/qrcode-utils";
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
 
 /**
  * GET /api/admin/tables/[id]/qrcode
  * Retrieve QR code for a specific table
  */
-export async function GET(req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest,{params} : {params: {id: string}}) {
   try {
     // Check authentication
     const session = await auth();
     if (!session || session.user.role !== UserRole.ADMIN) {
       return NextResponse.json(
-        { error: "Unauthorized: Admin access required" },
-        { status: 403 }
+          { error: "Unauthorized: Admin access required" },
+          { status: 403 }
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!id) {
       return NextResponse.json(
-        { error: "Table ID is required" },
-        { status: 400 }
+          { error: "Table ID is required" },
+          { status: 400 }
       );
     }
 
@@ -67,8 +62,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error("[ADMIN_TABLE_QRCODE_GET]", error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+        { error: "Internal server error" },
+        { status: 500 }
     );
   }
 }
