@@ -1,5 +1,3 @@
-// ~\app\(dashboard)\admin\owners\[id]\page.tsx
-
 import type { Metadata } from "next";
 import { db } from "~/server/db";
 import { notFound } from "next/navigation";
@@ -31,8 +29,9 @@ interface OwnerDetailsPageProps {
 export default async function OwnerDetailsPage({
   params,
 }: OwnerDetailsPageProps) {
-  const { id } = params;
-
+  
+  const { id } = await params;
+  
   const owner = await db.user.findUnique({
     where: {
       id,
