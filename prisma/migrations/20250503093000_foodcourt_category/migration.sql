@@ -72,6 +72,7 @@ CREATE TABLE "foodcourts" (
     "address" TEXT NOT NULL,
     "image" TEXT,
     "imagePublicId" TEXT,
+    "category" "CategoryType",
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "status" "FoodcourtStatus" NOT NULL DEFAULT 'BUKA',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -80,17 +81,6 @@ CREATE TABLE "foodcourts" (
     "creatorId" TEXT NOT NULL,
 
     CONSTRAINT "foodcourts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "foodcourt_categories" (
-    "id" TEXT NOT NULL,
-    "category" "CategoryType" NOT NULL,
-    "foodcourtId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "foodcourt_categories_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -165,6 +155,33 @@ CREATE TABLE "order_items" (
 );
 
 -- CreateTable
+CREATE TABLE "permission_templates" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "canEditMenu" BOOLEAN NOT NULL DEFAULT true,
+    "canViewOrders" BOOLEAN NOT NULL DEFAULT true,
+    "canUpdateOrders" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "createdById" TEXT NOT NULL,
+
+    CONSTRAINT "permission_templates_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "default_permissions" (
+    "id" TEXT NOT NULL,
+    "canEditMenu" BOOLEAN NOT NULL DEFAULT true,
+    "canViewOrders" BOOLEAN NOT NULL DEFAULT true,
+    "canUpdateOrders" BOOLEAN NOT NULL DEFAULT true,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedById" TEXT NOT NULL,
+
+    CONSTRAINT "default_permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "owner_permissions" (
     "id" TEXT NOT NULL,
     "canEditMenu" BOOLEAN NOT NULL DEFAULT true,
@@ -172,8 +189,22 @@ CREATE TABLE "owner_permissions" (
     "canUpdateOrders" BOOLEAN NOT NULL DEFAULT true,
     "ownerId" TEXT NOT NULL,
     "foodcourtId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "owner_permissions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "permission_history" (
+    "id" TEXT NOT NULL,
+    "permissionId" TEXT NOT NULL,
+    "previousSettings" JSONB NOT NULL,
+    "newSettings" JSONB NOT NULL,
+    "changedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "changedById" TEXT NOT NULL,
+
+    CONSTRAINT "permission_history_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -234,13 +265,13 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "foodcourts_ownerId_key" ON "foodcourts"("ownerId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "foodcourt_categories_foodcourtId_category_key" ON "foodcourt_categories"("foodcourtId", "category");
-
--- CreateIndex
 CREATE UNIQUE INDEX "tables_tableNumber_key" ON "tables"("tableNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "tables_qrCode_key" ON "tables"("qrCode");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "permission_templates_name_key" ON "permission_templates"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "owner_permissions_ownerId_foodcourtId_key" ON "owner_permissions"("ownerId", "foodcourtId");
@@ -256,9 +287,6 @@ ALTER TABLE "foodcourts" ADD CONSTRAINT "foodcourts_ownerId_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "foodcourts" ADD CONSTRAINT "foodcourts_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "foodcourt_categories" ADD CONSTRAINT "foodcourt_categories_foodcourtId_fkey" FOREIGN KEY ("foodcourtId") REFERENCES "foodcourts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "table_sessions" ADD CONSTRAINT "table_sessions_tableId_fkey" FOREIGN KEY ("tableId") REFERENCES "tables"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -279,10 +307,22 @@ ALTER TABLE "order_items" ADD CONSTRAINT "order_items_foodcourtId_fkey" FOREIGN 
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_menuItemId_fkey" FOREIGN KEY ("menuItemId") REFERENCES "menu_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "permission_templates" ADD CONSTRAINT "permission_templates_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "default_permissions" ADD CONSTRAINT "default_permissions_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "owner_permissions" ADD CONSTRAINT "owner_permissions_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "owner_permissions" ADD CONSTRAINT "owner_permissions_foodcourtId_fkey" FOREIGN KEY ("foodcourtId") REFERENCES "foodcourts"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "permission_history" ADD CONSTRAINT "permission_history_changedById_fkey" FOREIGN KEY ("changedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "permission_history" ADD CONSTRAINT "permission_history_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "owner_permissions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "order_logs" ADD CONSTRAINT "order_logs_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

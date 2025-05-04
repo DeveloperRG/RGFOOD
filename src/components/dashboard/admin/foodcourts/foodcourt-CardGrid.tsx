@@ -268,7 +268,7 @@ export function FoodcourtCardGrid({
                     : "border-red-150 bg-red-100 text-red-700"
                 }
               >
-                {foodcourt.isActive ? "Active" : "Inactive"}
+                {foodcourt.isActive ? "Aktif" : "Tidak Aktif"}
               </Badge>
               <Badge
                 variant={foodcourt.status === "BUKA" ? "default" : "secondary"}
@@ -278,7 +278,7 @@ export function FoodcourtCardGrid({
                     : "border-orange-150 bg-orange-100 text-orange-700"
                 }
               >
-                {foodcourt.status === "BUKA" ? "Open" : "Closed"}
+                {foodcourt.status === "BUKA" ? "Buka" : "Tutup"}
               </Badge>
             </div>
 
@@ -309,7 +309,7 @@ export function FoodcourtCardGrid({
               >
                 <Button className="w-full" variant="outline">
                   <Edit className="mr-2 h-4 w-4" />
-                  View Details
+                  Lihat Detail
                 </Button>
               </Link>
 
@@ -357,7 +357,7 @@ export function FoodcourtCardGrid({
               ) : (
                 <>
                   <Trash className="mr-2 h-4 w-4" />
-                  Delete Foodcourt
+                  Hapus Stand
                 </>
               )}
             </Button>

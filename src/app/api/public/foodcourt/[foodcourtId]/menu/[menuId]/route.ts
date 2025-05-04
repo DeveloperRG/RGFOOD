@@ -20,13 +20,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // First check if foodcourt exists and is active
+    // First check if foodcourt exists, is active, and is open
     const foodcourt = await db.foodcourt.findUnique({
       where: {
         id: foodcourtId,
         isActive: true,
       },
-      select: { id: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+      },
     });
 
     if (!foodcourt) {
@@ -36,7 +40,22 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Get specific menu item
+    // Check if foodcourt is open
+    if (foodcourt.status === "TUTUP") {
+      return NextResponse.json(
+        {
+          error: "Foodcourt is currently closed",
+          foodcourt: {
+            id: foodcourt.id,
+            name: foodcourt.name,
+            status: foodcourt.status,
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    // Get specific menu item with detailed information
     const menuItem = await db.menuItem.findUnique({
       where: {
         id: menuId,
@@ -48,14 +67,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         name: true,
         description: true,
         price: true,
-        imageUrl: true,
+        image: true,
+        imagePublicId: true,
         isAvailable: true,
+        categoryId: true,
+        createdAt: true,
+        updatedAt: true,
+        foodcourt: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            status: true,
+          },
+        },
       },
     });
 
     if (!menuItem) {
       return NextResponse.json(
-        { error: "Menu item not found" },
+        { error: "Menu item not found or not available" },
         { status: 404 },
       );
     }

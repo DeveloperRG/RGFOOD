@@ -1,5 +1,4 @@
 import { DashboardMetricCard } from "~/components/dashboard/admin/dashboard-metric-card";
-import { PendingRegistrationsCard } from "~/components/dashboard/admin/pending-registrations-card";
 import { UserRole } from "~/lib/shared-types";
 
 interface User {
@@ -57,7 +56,7 @@ export async function AdminDashboard({
       </div>
 
       {/* Dashboard metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <DashboardMetricCard
           className="h-[250px]"
           title="Operasi Stand"
@@ -149,12 +148,6 @@ export async function AdminDashboard({
             </div>
           }
         />
-
-
-      </div>
-
-      <div className="w-full">
-        <PendingRegistrationsCard pendingRegistrations={pendingRegistrations} />
       </div>
     </div>
   );

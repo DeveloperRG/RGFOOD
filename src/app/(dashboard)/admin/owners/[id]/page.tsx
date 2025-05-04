@@ -29,8 +29,9 @@ interface OwnerDetailsPageProps {
 export default async function OwnerDetailsPage({
   params,
 }: OwnerDetailsPageProps) {
+  
   const { id } = await params;
-
+  
   const owner = await db.user.findUnique({
     where: {
       id,

@@ -243,7 +243,7 @@ export default function FoodcourtDetailsPage() {
                     : "border-red-150 bg-red-100 text-red-700"
                 }
               >
-                {foodcourt.isActive ? "Active" : "Inactive"}
+                {foodcourt.isActive ? "Aktif" : "Tidak Aktif"}
               </Badge>
               <Badge
                 variant={foodcourt.status === "BUKA" ? "default" : "secondary"}
