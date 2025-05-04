@@ -2,6 +2,9 @@
  * QR Code utility functions
  */
 import QRCode from 'qrcode';
+import { createCanvas, loadImage } from 'canvas';
+import path from 'path';
+import fs from 'fs';
 
 /**
  * Generate a QR code URL for a table
@@ -74,5 +77,121 @@ export async function generateQrCodeBuffer(url: string, options?: QRCode.QRCodeT
   } catch (error) {
     console.error("Error generating QR code buffer:", error);
     throw new Error("Failed to generate QR code buffer");
+  }
+}
+
+/**
+ * Generate a QR code with a logo in the center
+ * Uses the 'qrcode' and 'canvas' libraries to generate a QR code with a logo
+ *
+ * @param {string} url - The URL to encode in the QR code
+ * @param {object} options - Options for QR code generation
+ * @returns {Promise<string>} - A promise that resolves to the QR code data URL with logo
+ */
+export async function generateQrCodeWithLogo(
+  url: string,
+  options?: QRCode.QRCodeToDataURLOptions & { logoWidth?: number; logoHeight?: number }
+): Promise<string> {
+  try {
+    // Default options for QR code generation
+    const defaultOptions: QRCode.QRCodeRenderersOptions = {
+      margin: 1,
+      width: 300,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'H', // High error correction for logo overlay
+      ...options
+    };
+
+    // Create a canvas to draw the QR code
+    const canvas = createCanvas(defaultOptions.width as number, defaultOptions.width as number);
+    const ctx = canvas.getContext('2d');
+
+    // Generate QR code and draw it on the canvas
+    const qrCodeDataUrl = await QRCode.toDataURL(url, defaultOptions);
+    const qrCodeImage = await loadImage(qrCodeDataUrl);
+    ctx.drawImage(qrCodeImage, 0, 0, canvas.width, canvas.height);
+
+    // Load and draw the logo in the center
+    const logoPath = path.join(process.cwd(), 'public', 'logo.png');
+    const logoImage = await loadImage(logoPath);
+
+    // Calculate logo size and position (default to 20% of QR code size)
+    const logoWidth = options?.logoWidth || canvas.width * 0.2;
+    const logoHeight = options?.logoHeight || canvas.height * 0.2;
+    const logoX = (canvas.width - logoWidth) / 2;
+    const logoY = (canvas.height - logoHeight) / 2;
+
+    // Create a white background for the logo
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(logoX - 5, logoY - 5, logoWidth + 10, logoHeight + 10);
+
+    // Draw the logo
+    ctx.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
+
+    // Convert canvas to data URL
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error("Error generating QR code with logo:", error);
+    throw new Error("Failed to generate QR code with logo");
+  }
+}
+
+/**
+ * Generate a QR code with a logo as a buffer
+ * Uses the 'qrcode' and 'canvas' libraries to generate a QR code with a logo
+ *
+ * @param {string} url - The URL to encode in the QR code
+ * @param {object} options - Options for QR code generation
+ * @returns {Promise<Buffer>} - A promise that resolves to the QR code buffer with logo
+ */
+export async function generateQrCodeWithLogoBuffer(
+  url: string,
+  options?: QRCode.QRCodeRenderersOptions & { logoWidth?: number; logoHeight?: number }
+): Promise<Buffer> {
+  try {
+    // Default options for QR code generation
+    const defaultOptions: QRCode.QRCodeRenderersOptions = {
+      margin: 1,
+      width: 300,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      errorCorrectionLevel: 'H', // High error correction for logo overlay
+      ...options
+    };
+
+    // Create a canvas to draw the QR code
+    const canvas = createCanvas(defaultOptions.width as number, defaultOptions.width as number);
+    const ctx = canvas.getContext('2d');
+
+    // Generate QR code and draw it on the canvas
+    await QRCode.toCanvas(canvas, url, defaultOptions);
+
+    // Load and draw the logo in the center
+    const logoPath = path.join(process.cwd(), 'public', 'logo.png');
+    const logoImage = await loadImage(logoPath);
+
+    // Calculate logo size and position (default to 20% of QR code size)
+    const logoWidth = options?.logoWidth || canvas.width * 0.2;
+    const logoHeight = options?.logoHeight || canvas.height * 0.2;
+    const logoX = (canvas.width - logoWidth) / 2;
+    const logoY = (canvas.height - logoHeight) / 2;
+
+    // Create a white background for the logo
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(logoX - 5, logoY - 5, logoWidth + 10, logoHeight + 10);
+
+    // Draw the logo
+    ctx.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
+
+    // Convert canvas to buffer
+    return canvas.toBuffer('image/png');
+  } catch (error) {
+    console.error("Error generating QR code buffer with logo:", error);
+    throw new Error("Failed to generate QR code buffer with logo");
   }
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { UserRole } from "@prisma/client";
-import { generateQrCodeDataUrl, generateTableQrCodeUrl } from "~/lib/qrcode-utils";
+import { generateQrCodeWithLogo, generateTableQrCodeUrl } from "~/lib/qrcode-utils";
 
 
 /**
@@ -45,9 +45,9 @@ export async function GET(req: NextRequest,{params} : {params: {id: string}}) {
       return NextResponse.json({ error: "Table not found" }, { status: 404 });
     }
 
-    // Generate QR code data URL
+    // Generate QR code data URL with logo
     const qrCodeUrl = table.qrCode || generateTableQrCodeUrl(table.id);
-    const qrCodeDataUrl = await generateQrCodeDataUrl(qrCodeUrl);
+    const qrCodeDataUrl = await generateQrCodeWithLogo(qrCodeUrl);
 
     // Format response
     const response = {

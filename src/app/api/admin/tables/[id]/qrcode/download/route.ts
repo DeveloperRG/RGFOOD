@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { UserRole } from "@prisma/client";
-import { generateQrCodeBuffer, generateTableQrCodeUrl } from "~/lib/qrcode-utils";
+import { generateQrCodeWithLogoBuffer, generateTableQrCodeUrl } from "~/lib/qrcode-utils";
 
 interface RouteParams {
   params: {
@@ -50,9 +50,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Table not found" }, { status: 404 });
     }
 
-    // Generate QR code buffer
+    // Generate QR code buffer with logo
     const qrCodeUrl = table.qrCode || generateTableQrCodeUrl(table.id);
-    const qrCodeBuffer = await generateQrCodeBuffer(qrCodeUrl);
+    const qrCodeBuffer = await generateQrCodeWithLogoBuffer(qrCodeUrl);
 
     // Create response with appropriate headers for file download
     const response = new NextResponse(qrCodeBuffer, {
