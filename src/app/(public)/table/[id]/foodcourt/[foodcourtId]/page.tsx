@@ -60,10 +60,10 @@ type CartItem = {
 };
 
 const categoryLabels = {
-  [CategoryType.MAKANAN_UTAMA]: "Main Dishes",
-  [CategoryType.MINUMAN]: "Drinks",
-  [CategoryType.CEMILAN]: "Snacks",
-  [CategoryType.MAKANAN_MANIS]: "Desserts",
+  [CategoryType.MAKANAN_UTAMA]: "Makanan Utama",
+  [CategoryType.MINUMAN]: "Minuman",
+  [CategoryType.CEMILAN]: "Jajanan",
+  [CategoryType.MAKANAN_MANIS]: "Pemanis",
 };
 
 export default function FoodcourtMenuPage() {
@@ -551,9 +551,9 @@ export default function FoodcourtMenuPage() {
             </div>
             <Link
               href={`/table/${tableId}/cart`}
-              className="relative rounded-full bg-blue-50 p-2"
+              className="relative rounded-full bg-green-50 p-2"
             >
-              <ShoppingCart className="h-6 w-6 text-blue-600" />
+              <ShoppingCart className="h-6 w-6 text-green-600" />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
                   {cartCount}
@@ -573,8 +573,8 @@ export default function FoodcourtMenuPage() {
             </div>
             <input
               type="text"
-              className="block w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Search menu items..."
+              className="block w-full rounded-full bg-gray-200 border border-gray-300 py-2 pr-3 pl-10 focus:border-blue-500 focus:ring-blue-500"
+              placeholder="mau menu apa kamu hari ini.."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -588,11 +588,11 @@ export default function FoodcourtMenuPage() {
               onClick={() => setSelectedCategory(null)}
               className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                 selectedCategory === null
-                  ? "bg-blue-600 text-white"
+                  ? "bg-green-600 text-white"
                   : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
               }`}
             >
-              All Items
+              Semua
             </button>
             {Object.entries(CategoryType).map(([key, value]) => (
               <button
@@ -600,7 +600,7 @@ export default function FoodcourtMenuPage() {
                 onClick={() => setSelectedCategory(value)}
                 className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                   selectedCategory === value
-                    ? "bg-blue-600 text-white"
+                    ? "bg-green-600 text-white"
                     : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                 }`}
               >
@@ -613,11 +613,11 @@ export default function FoodcourtMenuPage() {
         {/* Results Summary */}
         <div className="mb-6">
           <p className="text-gray-600">
-            Showing {filteredMenuItems.length} of {menuItems.length} menu items
+            Menunjukkan {filteredMenuItems.length} dari {menuItems.length} menu
             {selectedCategory && (
               <span>
                 {" "}
-                in {categoryLabels[selectedCategory as CategoryType]}
+                untuk {categoryLabels[selectedCategory as CategoryType]}
               </span>
             )}
             {searchQuery.trim() !== "" && (
@@ -628,7 +628,7 @@ export default function FoodcourtMenuPage() {
 
         {/* Menu Items Grid */}
         {filteredMenuItems.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {filteredMenuItems.map((menuItem) => (
               <div
                 key={menuItem.id}
@@ -653,7 +653,7 @@ export default function FoodcourtMenuPage() {
                 </div>
                 <div className="p-4">
                   <h3
-                    className="mb-1 cursor-pointer text-lg font-semibold text-gray-900"
+                    className="mb-1 cursor-pointer text-xl font-semibold text-back"
                     onClick={() => openMenuItemPopup(menuItem)}
                   >
                     {menuItem.name}
@@ -664,10 +664,11 @@ export default function FoodcourtMenuPage() {
                   >
                     {menuItem.description || "No description available"}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-lg font-bold text-blue-600">
-                      ${menuItem.price}
-                    </span>
+                 <div className="flex items-center justify-between">
+                  <span className="text-lg font-bold text-gren-600">
+                    Rp {Number(menuItem.price).toLocaleString('id-ID')}
+                  </span>
+
 
                     {/* Add to Cart or Quantity Controls */}
                     {itemsInCart[menuItem.id] ? (
@@ -700,7 +701,7 @@ export default function FoodcourtMenuPage() {
                       </div>
                     ) : (
                       <button
-                        className="rounded-md bg-blue-600 px-3 py-1 text-white transition-colors hover:bg-blue-700"
+                        className="rounded-md bg-green-600 px-3 py-1 text-white transition-colors hover:bg-green-700"
                         onClick={(e) => {
                           e.stopPropagation();
                           // This is in an event handler, so it's safe
@@ -734,10 +735,10 @@ export default function FoodcourtMenuPage() {
               </svg>
             </div>
             <h3 className="mb-1 text-lg font-medium text-gray-900">
-              No menu items found
+              Tidak bisa menemukan menu :(
             </h3>
             <p className="text-gray-500">
-              Try changing or clearing your filters
+              Coba dengan filter lain
             </p>
           </div>
         )}

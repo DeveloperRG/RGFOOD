@@ -91,21 +91,24 @@ export default function PublicLayout({
 
       {/* Footer with cart navigation button - hide on cart page */}
       {showCart && cartCount > 0 && !isCartPage && (
-        <div className="fixed bottom-0 left-0 z-30 w-full bg-white p-4 shadow-md">
-          <div className="mx-auto max-w-7xl">
+        <div className="fixed bottom-4 left-0 z-50 w-full px-4">
+          <div className="mx-auto max-w-md md:max-w-xl lg:max-w-2xl">
             <Link
               href={`/table/${tableId}/cart`}
-              className="flex w-full items-center justify-between rounded-lg bg-blue-600 px-6 py-3 text-left font-medium text-white hover:bg-blue-700"
+              className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-green-500 to-green-600 px-6 py-4 text-white shadow-xl transition-all duration-300 hover:from-green-600 hover:to-green-700"
             >
-              <div className="flex items-center">
-                <ShoppingCart className="mr-2 h-5 w-5" />
-                <span>Lihat Keranjang</span>
+              {/* Kiri: Ikon dan Label */}
+              <div className="flex items-center space-x-3">
+                <ShoppingCart className="h-6 w-6" />
+                <div className="text-base font-semibold">Lihat Keranjang</div>
               </div>
-              <div className="flex flex-col items-end">
-                <span>{cartCount} item</span>
-                <span className="text-sm">
+
+              {/* Kanan: Jumlah dan Total */}
+              <div className="text-right">
+                <div className="text-sm">{cartCount} item</div>
+                <div className="text-sm font-semibold">
                   Rp {cartTotal.toLocaleString("id-ID")}
-                </span>
+                </div>
               </div>
             </Link>
           </div>
