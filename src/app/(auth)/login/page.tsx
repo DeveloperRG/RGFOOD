@@ -6,31 +6,36 @@ import { LoginForm } from "~/components/auth/login-form";
 
 export default function LoginPage() {
   return (
-    <div className="relative container flex h-screen w-screen flex-col items-center justify-center">
-      <div className="absolute top-8 left-8">
+    <div className="relative container flex min-h-screen w-screen flex-col items-center justify-center px-4">
+      {/* Logo dan nama aplikasi */}
+      <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
         <Link href="/" className="flex items-center text-lg font-bold">
-          <span className="mr-2">🍽️</span> FoodCourt
+          <span className="mr-2">🍽️</span> Riau Garden FoodCourt
         </Link>
       </div>
 
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
+      {/* Konten utama */}
+      <div className="mx-auto flex w-full max-w-sm flex-col justify-center space-y-6">
         <div className="flex flex-col space-y-2 text-center">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Welcome back
+            Selamat Datang
           </h1>
           <p className="text-muted-foreground text-sm">
-            Sign in to your account to continue
+            Masuk ke akunmu untuk lanjut yuk~
           </p>
         </div>
+
+        {/* Form login */}
         <LoginForm />
 
+        {/* Link ke halaman register */}
         <p className="text-muted-foreground text-center text-sm">
-          Don't have an account?{" "}
+          Belum punya akun?{" "}
           <Link
             href="/register"
             className="text-primary underline-offset-4 hover:underline"
           >
-            Sign up
+            Daftar sekarang
           </Link>
         </p>
       </div>

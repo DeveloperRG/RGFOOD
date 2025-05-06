@@ -44,7 +44,7 @@ export default function VerificationErrorPage() {
     <div className="relative container flex h-screen w-screen flex-col items-center justify-center">
       <div className="absolute top-8 left-8">
         <Link href="/" className="flex items-center text-lg font-bold">
-          <span className="mr-2">🍽️</span> FoodCourt
+          <span className="mr-2">🍽️</span> Riau Garden FoodCourt
         </Link>
       </div>
 
@@ -60,11 +60,11 @@ export default function VerificationErrorPage() {
 
         <div className="flex flex-col space-y-4">
           <Button asChild>
-            <Link href="/login">Back to Login</Link>
+            <Link href="/login">Kembali ke Login</Link>
           </Button>
 
           <Button variant="outline" asChild>
-            <Link href="/register">Register Again</Link>
+            <Link href="/register">Register Kembali</Link>
           </Button>
         </div>
       </div>
