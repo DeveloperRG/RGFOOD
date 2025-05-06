@@ -165,7 +165,7 @@ export function DashboardMetricCard({
                 color: entry.fill.includes("url") ? "#000" : entry.fill,
               }}
             >
-              {entry.name}: {entry.value}
+              {entry.name} : {entry.value}
             </span>
           ))}
         </div>

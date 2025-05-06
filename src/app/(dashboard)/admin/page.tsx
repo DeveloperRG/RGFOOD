@@ -1,3 +1,5 @@
+// ~\src\app\(dashboard)\admin\page.tsx
+
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
@@ -50,6 +52,16 @@ export default async function AdminDashboardPage() {
     withoutFoodcourt: ownerWithoutFoodcourt,
   };
 
+  const tableAvailability = {
+    available: await db.table.count({
+      where: { isAvailable: true },
+    }),
+    unavailable: await db.table.count({
+      where: { isAvailable: false },
+    }),
+  };
+
+
   const orderCount = await db.order.count();
   const totalMenuItems = await db.menuItem.count();
 
@@ -80,6 +92,7 @@ export default async function AdminDashboardPage() {
         ownerCount,
         orderCount,
         totalMenuItems,
+        tableAvailability,
       }}
       pendingRegistrations={pendingRegistrations}
     />

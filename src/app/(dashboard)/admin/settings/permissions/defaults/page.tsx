@@ -92,7 +92,7 @@ export default function DefaultPermissionsPage() {
   };
   
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-0">
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Default Permissions</h1>
         <p className="text-muted-foreground">

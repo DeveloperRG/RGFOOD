@@ -33,7 +33,7 @@ export default function BulkPermissionsPage() {
                 Efficiently manage permissions for multiple owners
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-0">
               <p className="text-sm text-muted-foreground">
                 Bulk permission management allows you to apply a permission template to multiple owners at once, saving time when managing large numbers of owners.
               </p>
