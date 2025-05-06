@@ -7,32 +7,36 @@ import { RegisterForm } from "~/components/auth/register-form";
 
 export default function RegisterPage() {
   return (
-    <div className="relative container flex h-screen w-screen flex-col items-center justify-center">
-      <div className="absolute top-8 left-8">
+    <div className="relative container flex min-h-screen w-screen flex-col items-center justify-center px-4">
+      {/* Logo dan navigasi ke beranda */}
+      <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
         <Link href="/" className="flex items-center text-lg font-bold">
-          <span className="mr-2">🍽️</span> FoodCourt
+          <span className="mr-2">🍽️</span> Riau Garden FoodCourt
         </Link>
       </div>
 
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
+      {/* Konten utama */}
+      <div className="mx-auto flex w-full max-w-sm flex-col justify-center space-y-6">
         <div className="flex flex-col space-y-2 text-center">
           <h1 className="text-3xl font-semibold tracking-tight">
-            Create an account
+            Daftar Akun Baru
           </h1>
           <p className="text-muted-foreground text-sm">
-            Sign up to start using our platform
+            Yuk, buat akun dan mulai gunakan layanan kami!
           </p>
         </div>
 
+        {/* Form pendaftaran */}
         <RegisterForm />
 
+        {/* Link ke halaman login */}
         <p className="text-muted-foreground text-center text-sm">
-          Already have an account?{" "}
+          Sudah punya akun?{" "}
           <Link
             href="/login"
             className="text-primary underline-offset-4 hover:underline"
           >
-            Sign in
+            Masuk di sini
           </Link>
         </p>
       </div>
