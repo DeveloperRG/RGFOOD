@@ -1,3 +1,5 @@
+//~\src\app\(dashboard)\admin\tables\page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -131,7 +133,7 @@ export default function TablesPage() {
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-0">
       <div className="mb-8">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>

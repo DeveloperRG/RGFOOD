@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { db } from "~/server/db";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { PlusCircle, MoreHorizontal, CheckCircle, XCircle } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { OwnerTables } from "~/components/dashboard/admin/owners/owner-tables";
 
 export const metadata: Metadata = {
@@ -79,9 +79,7 @@ export default async function OwnersPage() {
     <div className="container mx-auto py-0">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Pemilik Stand
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Pemilik Stand</h1>
           <p className="text-muted-foreground">
             Kelola semua pemilik stand di Sistem
           </p>
@@ -93,6 +91,7 @@ export default async function OwnersPage() {
           </Button>
         </Link>
       </div>
+
 
       <div className="mx-auto max-w-6xl">
         <OwnersTable owners={owners} />

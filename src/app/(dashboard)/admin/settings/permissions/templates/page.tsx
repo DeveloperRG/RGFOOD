@@ -235,7 +235,7 @@ export default function PermissionTemplatesPage() {
   };
   
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-0">
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Permission Templates</h1>
         <p className="text-muted-foreground">
