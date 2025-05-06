@@ -44,10 +44,10 @@ interface TableInfo {
 }
 
 const categoryLabels = {
-  [CategoryType.MAKANAN_UTAMA]: "Main Dishes",
-  [CategoryType.MINUMAN]: "Drinks",
-  [CategoryType.CEMILAN]: "Snacks",
-  [CategoryType.MAKANAN_MANIS]: "Desserts",
+  [CategoryType.MAKANAN_UTAMA]: "Makanan Utama",
+  [CategoryType.MINUMAN]: "Minuman",
+  [CategoryType.CEMILAN]: "Jajanan",
+  [CategoryType.MAKANAN_MANIS]: "Manisan",
 };
 
 const statusLabels = {
@@ -198,14 +198,14 @@ export default function FoodcourtsPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-7xl">
         <header className="mb-8">
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">Foodcourts</h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">Stand-stand</h1>
           {tableInfo && (
             <div className="mb-2 inline-block rounded-lg bg-blue-50 px-3 py-1 text-blue-700">
               Table #{tableInfo.tableNumber}
             </div>
           )}
           <p className="text-gray-600">
-            Explore our available foodcourts and filter by category
+            Jelajahi menu pilihan mu
           </p>
         </header>
 
@@ -228,7 +228,7 @@ export default function FoodcourtsPage() {
         {/* Category Filters */}
         <div className="mb-8">
           <h2 className="mb-3 text-lg font-medium text-gray-800">
-            Filter by Category
+            Filter Kategori
           </h2>
           <div className="flex flex-wrap gap-2">
             {Object.values(CategoryType).map((category) => (
@@ -249,7 +249,7 @@ export default function FoodcourtsPage() {
                 onClick={() => setSelectedCategories([])}
                 className="rounded-full bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300"
               >
-                Clear Filters
+                Hapus Filter
               </button>
             )}
           </div>
@@ -258,12 +258,12 @@ export default function FoodcourtsPage() {
         {/* Results Summary */}
         <div className="mb-6">
           <p className="text-gray-600">
-            Showing {filteredFoodcourts.length} of {foodcourts.length}{" "}
-            foodcourts
+            Menunjukkan {filteredFoodcourts.length} dari {foodcourts.length}{" "}
+            Stand
             {selectedCategories.length > 0 && (
               <span>
                 {" "}
-                filtered by{" "}
+                berdasarkan {" "}
                 {selectedCategories.map((c) => categoryLabels[c]).join(", ")}
               </span>
             )}
@@ -347,10 +347,10 @@ export default function FoodcourtsPage() {
               </svg>
             </div>
             <h3 className="mb-1 text-lg font-medium text-gray-900">
-              No foodcourts found
+              Stand yang kamu cari tidak tersedia :(
             </h3>
             <p className="text-gray-500">
-              Try changing or clearing your filters
+              Coba dengan filter lain yaa
             </p>
           </div>
         )}
